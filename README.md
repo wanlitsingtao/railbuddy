@@ -157,10 +157,10 @@ python -m railbuddy
 
 使用 `install_service.bat` 一键安装两个 Windows 服务：抓取调度服务 + Web 管理面板服务。
 
-**前置条件：** 安装 [NSSM](https://nssm.cc/download)，将 `nssm.exe` 放到系统 PATH 或 `C:\Windows\System32\`
+> 脚本会自动检测并下载 [NSSM](https://nssm.cc/download)，无需手动安装。需要管理员权限运行。
 
 ```bash
-# 安装并启动两个服务
+# 安装并启动两个服务（会自动请求管理员权限）
 install_service.bat
 
 # 其他操作
@@ -169,6 +169,13 @@ install_service.bat start        # 启动两个服务
 install_service.bat stop         # 停止两个服务
 install_service.bat restart      # 重启两个服务
 install_service.bat status       # 查看服务状态
+```
+
+也可以直接用 Python 脚本（需管理员权限的终端）：
+
+```bash
+python install_service.py install
+python install_service.py status
 ```
 
 安装后会在 Windows 服务中注册：
@@ -188,7 +195,8 @@ railbuddy/
 ├── config.example.yaml      # 配置模板
 ├── requirements.txt         # Python 依赖
 ├── install.bat              # 环境安装脚本
-├── install_service.bat      # Windows 服务安装脚本
+├── install_service.bat      # Windows 服务安装启动器（调用 Python 脚本）
+├── install_service.py       # Windows 服务安装/管理脚本（自动下载 NSSM）
 ├── railbuddy/               # 主程序包
 │   ├── __main__.py          # 命令行入口
 │   ├── app.py               # 主应用（业务编排）
