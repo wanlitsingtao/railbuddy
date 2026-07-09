@@ -1,0 +1,432 @@
+sources:
+- name: 深圳地铁招采平台
+  type: website
+  enabled: true
+  url: https://cg.shenzhenmc.com/fcggggs/
+  list_selector: div.List2 ul li
+  title_selector: a
+  link_selector: a
+  date_selector: span.Gray
+  link_prefix: https://cg.shenzhenmc.com
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 开通
+  - 运营
+  fetch_detail: false
+  detail_content_selector: '.content, .article-content, #content'
+  timeout: 15
+  request_interval: 2
+- name: 广州地铁招标网
+  type: website
+  enabled: true
+  url: https://bid.gzmtr.com/bizzbgg/
+  list_selector: ul.list li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: https://bid.gzmtr.com/bizzbgg
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 开通
+  - 运营
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 轨道交通网-招标信息
+  type: website
+  enabled: true
+  url: http://www.rail-transit.com/zhaobiao/
+  list_selector: ul.exhibition_con_ul li.main2_tender_contents_li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: http://www.rail-transit.com
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 计划
+  - 轨道
+  - 地铁
+  - 城轨
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 轨道交通网-中标信息
+  type: website
+  enabled: true
+  url: http://www.rail-transit.com/zhongbiao/
+  list_selector: ul.exhibition_con_ul li.main2_tender_contents_li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: http://www.rail-transit.com
+  keywords:
+  - 中标
+  - 成交
+  - 轨道
+  - 地铁
+  - 城轨
+  - 公告
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 轨道交通网-行业新闻
+  type: website
+  enabled: true
+  url: http://www.rail-transit.com/
+  list_selector: ul.tab_box_content_ul li.tab_box_content_ul_li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: http://www.rail-transit.com
+  keywords:
+  - 开通
+  - 运营
+  - 通车
+  - 试运营
+  - 开工
+  - 竣工
+  - 开通试运营
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 天津轨道交通招标采购
+  type: website
+  enabled: true
+  url: http://www.tjgdjt.com/xinwen/node_163.htm
+  list_selector: .listbox ul li
+  title_selector: a
+  link_selector: a
+  date_selector: span
+  link_prefix: http://www.tjgdjt.com/xinwen/
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 询比
+  - 竞价
+  - 开通
+  - 运营
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 苏州轨道交通招采平台
+  type: website
+  enabled: true
+  url: http://zzcg.sz-mtr.com/cgxx/002002/sort.html
+  list_selector: ul.notice-list li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: http://zzcg.sz-mtr.com
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 询比
+  - 轨道
+  - 地铁
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 宁波轨道交通招标
+  type: website
+  enabled: true
+  url: http://www.nbmetro.com/tender_report.php?1
+  list_selector: .news-text-list ul li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: http://www.nbmetro.com/
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 铁路
+  - 轨道
+  - 地铁
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 杭州地铁招采平台
+  type: website
+  enabled: true
+  url: https://zhaocai.hzmetro.com/cmsfwcggg/index.html
+  list_selector: ul.List2 li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: https://zhaocai.hzmetro.com
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 南京地铁招标中心
+  type: website
+  enabled: true
+  url: https://www.njmetro.com.cn/njdtweb/home/go-tender-center.do?columnId1=8a808007651c972001651d88ebe20001&columnId2=8a808007651c972001651d894beb0002
+  list_selector: ul.main_ul1 li.tender_tli01
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: https://www.njmetro.com.cn
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+  verify_ssl: false
+- name: 郑州地铁采购公告
+  type: website
+  enabled: true
+  url: https://www.zzmetro.cn/nav/list/33/35
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: https://www.zzmetro.cn
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 轨道
+  - 地铁
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 郑州地铁中标公示
+  type: website
+  enabled: true
+  url: https://www.zzmetro.cn/nav/list/33/37
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: https://www.zzmetro.cn
+  keywords:
+  - 中标
+  - 成交
+  - 轨道
+  - 地铁
+  - 公告
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 成都轨道交通
+  type: website
+  enabled: false
+  url: https://www.chengdurail.com/xmzc/jygg.htm
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: https://www.chengdurail.com
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 轨道
+  - 地铁
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 武汉地铁集团
+  type: website
+  enabled: false
+  url: https://www.wuhanrt.com/group-news-list.html?id=220
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: https://www.wuhanrt.com
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 轨道
+  - 地铁
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 重庆轨道交通
+  type: website
+  enabled: false
+  url: https://www.cqmetro.cn/cgxx/
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: https://www.cqmetro.cn
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 轨道
+  - 地铁
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+wechat_sources:
+- name: 轨道世界
+  type: wechat
+  enabled: true
+  fetch_method: sogou
+  search_keyword: 轨道世界
+  keywords: &id001
+  - 轨道
+  - 地铁
+  - 城轨
+  - 铁路
+  - 交通
+  - 项目
+  - 工程
+  - 招标
+  - 采购
+  - 中标
+  - 开通
+  - 运营
+  - 通车
+  - 信号
+  - 车辆
+  - 供电
+  - 机电
+  - 施工
+  timeout: 15
+  request_interval: 3
+- name: 轨道交通网
+  type: wechat
+  enabled: true
+  fetch_method: sogou
+  search_keyword: 轨道交通网
+  keywords: *id001
+  timeout: 15
+  request_interval: 3
+- name: 轨道城市
+  type: wechat
+  enabled: true
+  fetch_method: sogou
+  search_keyword: 轨道城市
+  keywords: *id001
+  timeout: 15
+  request_interval: 3
+- name: 轨道市场
+  type: wechat
+  enabled: true
+  fetch_method: sogou
+  search_keyword: 轨道市场
+  keywords: *id001
+  timeout: 15
+  request_interval: 3
+- name: 乙方宝
+  type: wechat
+  enabled: true
+  fetch_method: sogou
+  search_keyword: 乙方宝
+  keywords: *id001
+  timeout: 15
+  request_interval: 3
+- name: 轨道纵横
+  type: wechat
+  enabled: true
+  fetch_method: sogou
+  search_keyword: 轨道纵横
+  keywords: *id001
+  timeout: 15
+  request_interval: 3
+- name: 都市轨道交通网
+  type: wechat
+  enabled: true
+  fetch_method: sogou
+  search_keyword: 都市轨道交通网
+  keywords: *id001
+  timeout: 15
+  request_interval: 3
+- name: 现代城市轨道交通
+  type: wechat
+  enabled: true
+  fetch_method: sogou
+  search_keyword: 现代城市轨道交通
+  keywords: *id001
+  timeout: 15
+  request_interval: 3
+- name: 铁路与城轨
+  type: wechat
+  enabled: true
+  fetch_method: sogou
+  search_keyword: 铁路与城轨
+  keywords: *id001
+  timeout: 15
+  request_interval: 3
+email:
+  smtp_server: smtp.qq.com
+  smtp_port: 465
+  use_ssl: true
+  sender: your_email@qq.com
+  password: your_authorization_code
+  receiver: receiver_email@qq.com
+schedule:
+  times:
+  - 08:00
+  - '12:00'
+  timezone: Asia/Shanghai
+  fetch_on_start: true
+dedup:
+  db_path: data/railbuddy.db
+  retention_days: 90
+  max_items_per_source: 100
+logging:
+  level: INFO
+  file: logs/railbuddy.log
+  backup_count: 30
