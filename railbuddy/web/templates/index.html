@@ -287,6 +287,133 @@
             border-radius: 6px;
             font-size: 13px;
         }
+        .search-input-wrap {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+        .search-input-wrap input {
+            width: 260px;
+            padding-right: 28px;
+        }
+        .search-clear {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 18px;
+            line-height: 1;
+            display: none;
+            width: 18px;
+            height: 18px;
+            text-align: center;
+        }
+        .search-input-wrap input:not(:placeholder-shown) + .search-clear {
+            display: block;
+        }
+        .date-range-wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .date-range-wrap .date-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+        .date-range-wrap input[type="date"] {
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 13px;
+            width: 130px;
+        }
+        .date-range-wrap .date-sep {
+            color: var(--text-tertiary);
+            font-size: 13px;
+        }
+
+        /* ===== 密码显示切换 ===== */
+        .password-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .password-wrap input {
+            flex: 1;
+            padding-right: 42px;
+        }
+        .password-toggle {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 14px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .password-toggle:hover { background: #f0f0f0; color: var(--text); }
+
+        /* ===== 搜狗链接提示 ===== */
+        .sogou-link-wrap { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .sogou-link-wrap a { color: var(--primary); text-decoration: none; }
+        .sogou-link-wrap a:hover { text-decoration: underline; }
+        .link-actions { display: inline-flex; gap: 4px; }
+        .link-actions button {
+            background: #f5f5f5;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+        .link-actions button:hover { background: #e8f0fe; color: var(--primary); border-color: var(--primary); }
+        .sogou-badge {
+            background: #fff3e0;
+            color: #e65100;
+            font-size: 11px;
+            padding: 1px 6px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+        .sogou-tip {
+            background: #fff8e1;
+            border: 1px solid #ffe082;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 12px;
+            color: #5d4037;
+            margin-top: 4px;
+            line-height: 1.5;
+        }
+
+        /* ===== 字段帮助说明 ===== */
+        .field-help {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            line-height: 1.5;
+        }
+        .field-help code {
+            background: #f3f4f6;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 11px;
+            color: var(--text);
+        }
+        .field-help .example {
+            color: var(--primary);
+            font-style: italic;
+        }
+        .highlight { background: #fff59d; padding: 0 2px; border-radius: 2px; }
 
         /* ===== 操作区 ===== */
         .action-bar {
@@ -322,6 +449,53 @@
         .dot-green { background: var(--success); }
         .dot-red { background: var(--danger); }
         .dot-gray { background: #bbb; }
+
+        /* ===== 邮箱标签输入 ===== */
+        .email-tags-input {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            min-height: 38px;
+            padding: 6px 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: text;
+            transition: border-color 0.2s;
+        }
+        .email-tags-input:focus-within { border-color: var(--primary); }
+        .email-tags-list {
+            display: contents;
+        }
+        .email-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            background: var(--primary-light);
+            color: var(--primary);
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .email-tag .remove {
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        .email-tag .remove:hover { opacity: 1; }
+        .email-tag-input {
+            flex: 1;
+            min-width: 180px;
+            border: none;
+            outline: none;
+            font-size: 13px;
+            font-family: inherit;
+            background: transparent;
+            padding: 2px 0;
+        }
     </style>
 </head>
 <body>
@@ -336,7 +510,8 @@
             <li class="active" data-page="dashboard"><span class="icon">📊</span> 仪表盘</li>
             <li data-page="sources"><span class="icon">🌐</span> 网站数据源</li>
             <li data-page="wechat"><span class="icon">📱</span> 公众号数据源</li>
-            <li data-page="items"><span class="icon">📋</span> 抓取记录</li>
+            <li data-page="items"><span class="icon">📋</span> 行业动态</li>
+            <li data-page="mileage"><span class="icon">📈</span> 里程统计</li>
             <li data-page="logs"><span class="icon">📧</span> 发送日志</li>
             <li data-page="email"><span class="icon">✉️</span> 邮箱设置</li>
             <li data-page="schedule"><span class="icon">⏰</span> 调度设置</li>
@@ -364,6 +539,7 @@
                 <div id="sourceStatesTable">
                     <div class="loading">加载中...</div>
                 </div>
+                <div id="sourceStatesPagination" class="pagination"></div>
             </div>
             <div class="card">
                 <div class="card-title">最近发送记录</div>
@@ -385,6 +561,7 @@
             </div>
             <div class="card">
                 <div id="sourcesTable"><div class="loading">加载中...</div></div>
+                <div id="sourcesPagination" class="pagination"></div>
             </div>
         </div>
 
@@ -400,28 +577,85 @@
             </div>
             <div class="card">
                 <div id="wechatTable"><div class="loading">加载中...</div></div>
+                <div id="wechatPagination" class="pagination"></div>
             </div>
         </div>
 
-        <!-- 抓取记录 -->
+        <!-- 行业动态 -->
         <div class="page" id="page-items">
             <div class="page-header">
-                <h2>抓取记录</h2>
-                <div class="desc">浏览所有已抓取的招标信息条目</div>
+                <h2>行业动态</h2>
+                <div class="desc">浏览所有已抓取的招标信息与行业报告</div>
             </div>
             <div class="filter-bar">
                 <select id="filterSource" onchange="loadItems(1)"><option value="">全部来源</option></select>
+                <select id="filterCategory" onchange="loadItems(1)">
+                    <option value="">全部分类</option>
+                </select>
                 <select id="filterStatus" onchange="loadItems(1)">
                     <option value="">全部状态</option>
                     <option value="new">待发送</option>
                     <option value="sent">已发送</option>
                 </select>
-                <input type="text" id="filterKeyword" placeholder="搜索标题/摘要..." style="width:220px" onkeyup="if(event.key==='Enter')loadItems(1)">
+                <div class="date-range-wrap">
+                    <span class="date-label">发布日期</span>
+                    <input type="date" id="filterDateFrom" onchange="loadItems(1)">
+                    <span class="date-sep">~</span>
+                    <input type="date" id="filterDateTo" onchange="loadItems(1)">
+                </div>
+                <div class="search-input-wrap">
+                    <input type="text" id="filterKeyword" placeholder="关键词搜索（空格分隔=OR）..." autocomplete="off" title="支持空格分隔的多个关键词，例：深圳 17 会匹配含『深圳』或『17』的条目">
+                    <span class="search-clear" id="searchClear" onclick="clearSearch()">&times;</span>
+                </div>
                 <button class="btn btn-outline btn-sm" onclick="loadItems(1)">搜索</button>
+                <button class="btn btn-outline btn-sm" onclick="clearDateFilter()">清除日期</button>
+            </div>
+            <div class="action-bar" id="itemsActionBar">
+                <button class="btn btn-outline btn-sm" onclick="toggleSelectAll()">全选/取消全选</button>
+                <button class="btn btn-success btn-sm" onclick="sendSelectedItems()">📤 发送选中</button>
+                <span id="selectedCount" style="font-size:13px;color:var(--text-secondary);margin-left:8px"></span>
             </div>
             <div class="card">
                 <div id="itemsTable"><div class="loading">加载中...</div></div>
                 <div id="itemsPagination" class="pagination"></div>
+            </div>
+        </div>
+
+        <!-- 里程统计 -->
+        <div class="page" id="page-mileage">
+            <div class="page-header">
+                <h2>里程统计</h2>
+                <div class="desc">全国城市轨道交通里程数据分析（1969年至今）</div>
+            </div>
+            <div class="action-bar">
+                <button class="btn btn-outline btn-sm" onclick="loadMileageStats()">🔁 刷新</button>
+                <button class="btn btn-primary btn-sm" onclick="seedHistoryData()">📥 加载历史数据</button>
+                <span id="seedStatus" style="margin-left:8px;font-size:13px;color:var(--text-secondary)"></span>
+            </div>
+            <div class="stats-grid" id="mileageStatsGrid" style="margin-bottom:20px">
+                <div class="loading">加载中...</div>
+            </div>
+            <div class="card" style="margin-bottom:20px">
+                <h3 style="margin-bottom:12px">全国年度里程增长趋势（1969-至今）</h3>
+                <div style="margin-bottom:8px;font-size:13px;color:var(--text-secondary)">
+                    柱状图为全国城轨年度运营里程，按制式分类堆叠（地铁 / 其他制式）
+                </div>
+                <div id="annualTrendChart" style="height:400px"><div class="loading">加载中...</div></div>
+            </div>
+            <div class="card" style="margin-bottom:20px">
+                <h3 style="margin-bottom:12px">制式分类统计（最新数据月）</h3>
+                <div id="systemTypeBreakdown"><div class="loading">加载中...</div></div>
+            </div>
+            <div class="card" style="margin-bottom:20px">
+                <h3 style="margin-bottom:12px">城市维度里程排名（最新数据月）</h3>
+                <div id="cityRankingTable"><div class="loading">加载中...</div></div>
+            </div>
+            <div class="card">
+                <h3 style="margin-bottom:12px">主要城市年度里程增长趋势</h3>
+                <div style="margin-bottom:8px;font-size:13px;color:var(--text-secondary)">
+                    展示运营里程前10城市的逐年累计里程变化
+                </div>
+                <div id="cityTrendChart" style="height:400px"><div class="loading">加载中...</div></div>
             </div>
         </div>
 
@@ -433,6 +667,7 @@
             </div>
             <div class="card">
                 <div id="sendLogsTable"><div class="loading">加载中...</div></div>
+                <div id="sendLogsPagination" class="pagination"></div>
             </div>
         </div>
 
@@ -470,49 +705,157 @@
         <div class="modal-body">
             <input type="hidden" id="srcIndex" value="-1">
             <div class="form-group">
-                <label>名称 <span class="hint">(必填)</span></label>
-                <input type="text" class="form-control" id="srcName" placeholder="如：深圳地铁招采平台">
+                <label>数据类型 <span class="hint">(必选)</span></label>
+                <select class="form-control" id="srcType" onchange="onSourceTypeChange()">
+                    <option value="website">网站 (HTML/CSS选择器)</option>
+                    <option value="api">API (JSON接口/SPA站点)</option>
+                </select>
+                <div class="field-help">
+                    <b>网站</b>：通过 HTML 抓取列表页 + CSS 选择器提取条目，适用于普通网站。<br>
+                    <b>API</b>：通过 JSON 接口直接获取结构化数据，适用于 SPA 动态加载站点（如深圳公共资源交易中心）。
+                </div>
             </div>
             <div class="form-group">
-                <label>列表页 URL <span class="hint">(必填)</span></label>
-                <input type="text" class="form-control" id="srcUrl" placeholder="https://example.com/bids/">
+                <label>名称 <span class="hint">(必填)</span></label>
+                <input type="text" class="form-control" id="srcName" placeholder="如：深圳公共资源交易中心">
+                <div class="field-help">给这个数据源起个容易识别的名字，如"XX市公共资源交易中心"</div>
             </div>
-            <div class="form-row">
+
+            <!-- ===== Website 专属字段 ===== -->
+            <div id="websiteFields">
                 <div class="form-group">
-                    <label>列表选择器 <span class="hint">(CSS)</span></label>
-                    <input type="text" class="form-control" id="srcListSelector" placeholder="div.List2 ul li">
+                    <label>列表页 URL <span class="hint">(必填)</span></label>
+                    <input type="text" class="form-control" id="srcUrl" placeholder="https://example.com/bids/">
+                    <div class="field-help">招标公告列表页面的完整网址。打开目标网站，找到公告列表页，复制浏览器地址栏中的 URL。<br><span class="example">示例：青岛公共资源交易中心列表页 https://ggzy.qingdao.gov.cn/Tradeinfo-GGGSList/0-0-0</span></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>列表选择器 <span class="hint">(CSS)</span></label>
+                        <input type="text" class="form-control" id="srcListSelector" placeholder="div.List2 ul li">
+                        <div class="field-help">用 CSS 选择器定位列表中的<b>每一条</b>公告。获取方法：在列表页右键 → 检查元素 → 找到包含单条公告的 HTML 元素 → 右键「Copy → Copy selector」。<br><span class="example">常用形式：<code>ul.list li</code>、<code>table tr</code>、<code>div.items div.item</code></span></div>
+                    </div>
+                    <div class="form-group">
+                        <label>链接前缀</label>
+                        <input type="text" class="form-control" id="srcLinkPrefix" placeholder="https://example.com">
+                        <div class="field-help">如果公告链接是相对路径（如 <code>/detail/123.html</code>），需要填写网站域名作为前缀，系统会自动拼接成完整 URL。<br><span class="example">示例：<code>https://cg.shenzhenmc.com</code>。如果链接已经是完整 URL 则留空。</span></div>
+                    </div>
+                </div>
+                <div class="form-row-3">
+                    <div class="form-group">
+                        <label>标题选择器</label>
+                        <input type="text" class="form-control" id="srcTitleSelector" placeholder="a">
+                        <div class="field-help">在"列表选择器"找到的每个元素内部，用来定位<b>标题文字</b>的选择器。通常是 <code>a</code>（链接文字就是标题）。<br><span class="example">如果标题在 h3 里：填 <code>h3</code></span></div>
+                    </div>
+                    <div class="form-group">
+                        <label>链接选择器</label>
+                        <input type="text" class="form-control" id="srcLinkSelector" placeholder="a">
+                        <div class="field-help">在列表项内部定位<b>详情页链接</b>的选择器。通常也是 <code>a</code>，系统会取其 <code>href</code> 属性。</div>
+                    </div>
+                    <div class="form-group">
+                        <label>日期选择器</label>
+                        <input type="text" class="form-control" id="srcDateSelector" placeholder="span.Gray">
+                        <div class="field-help">在列表项内部定位<b>发布日期</b>的选择器。如果页面没有显示日期，留空即可。<br><span class="example">示例：<code>span.date</code>、<code>td:last-child</code>（表格最后一列）</span></div>
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label>链接前缀</label>
-                    <input type="text" class="form-control" id="srcLinkPrefix" placeholder="https://example.com">
+                    <label>详情页内容选择器 <span class="hint">(可选)</span></label>
+                    <input type="text" class="form-control" id="srcDetailSelector" placeholder=".content, .article-content">
+                    <div class="field-help">如果勾选了"抓取详情页内容"，系统会打开每条公告的详情页，用这个选择器提取正文内容。一般不需要开启。<br><span class="example">示例：<code>.content</code>、<code>#articleBody</code></span></div>
+                </div>
+                <div class="form-group">
+                    <label><input type="checkbox" id="srcFetchDetail"> 抓取详情页内容</label>
+                    <div class="field-help">勾选后系统会逐个打开公告详情页抓取正文。会增加请求量和耗时，一般不需要开启。</div>
                 </div>
             </div>
-            <div class="form-row-3">
+
+            <!-- ===== API 专属字段 ===== -->
+            <div id="apiFields" style="display:none">
                 <div class="form-group">
-                    <label>标题选择器</label>
-                    <input type="text" class="form-control" id="srcTitleSelector" placeholder="a">
+                    <label>API URL <span class="hint">(必填)</span></label>
+                    <input type="text" class="form-control" id="srcApiUrl" placeholder="https://example.com/api/v1/content/page">
+                    <div class="field-help">JSON 接口的完整地址。系统会向该地址发送请求获取列表数据。需要在浏览器中按 F12 → Network 找到该 API。</div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>请求方法</label>
+                        <select class="form-control" id="srcApiMethod">
+                            <option value="POST">POST</option>
+                            <option value="GET">GET</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>频道/栏目 ID</label>
+                        <input type="text" class="form-control" id="srcChannelId" placeholder="2851">
+                        <div class="field-help">API 通常按频道 ID 区分不同栏目（如建设工程、政府采购）。在 API 文档或请求包中找到。</div>
+                    </div>
+                </div>
+                <div class="form-row-3">
+                    <div class="form-group">
+                        <label>每页条数</label>
+                        <input type="number" class="form-control" id="srcPageSize" value="30">
+                    </div>
+                    <div class="form-group">
+                        <label>最大页数</label>
+                        <input type="number" class="form-control" id="srcMaxPages" value="5">
+                        <div class="field-help">最多抓取的页数。增量抓取时只取首页（首次除外）。</div>
+                    </div>
+                    <div class="form-group">
+                        <label><input type="checkbox" id="srcVerifySsl" checked> 校验 SSL 证书</label>
+                        <div class="field-help">部分站点证书过期或自签，需取消勾选。</div>
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label>链接选择器</label>
-                    <input type="text" class="form-control" id="srcLinkSelector" placeholder="a">
+                    <label>数据路径 <span class="hint">(JSONPath)</span></label>
+                    <input type="text" class="form-control" id="srcDataPath" value="data.content" placeholder="data.content">
+                    <div class="field-help">在 API 返回 JSON 中，定位到<b>列表数组</b>的路径。<span class="example">示例：<code>data.content</code>、<code>result.list</code>、<code>data.items</code></span></div>
+                </div>
+                <div class="form-row-3">
+                    <div class="form-group">
+                        <label>标题字段名</label>
+                        <input type="text" class="form-control" id="srcTitleField" value="title" placeholder="title">
+                    </div>
+                    <div class="form-group">
+                        <label>日期字段名</label>
+                        <input type="text" class="form-control" id="srcDateField" value="releaseTime" placeholder="releaseTime">
+                    </div>
+                    <div class="form-group">
+                        <label>ID 字段名</label>
+                        <input type="text" class="form-control" id="srcIdField" value="id" placeholder="id">
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label>日期选择器</label>
-                    <input type="text" class="form-control" id="srcDateSelector" placeholder="span.Gray">
+                    <label>详情页 URL 模板 <span class="hint">(可选)</span></label>
+                    <input type="text" class="form-control" id="srcDetailUrlTemplate" placeholder="https://example.com/detail?id={id}">
+                    <div class="field-help">用 <code>{id_field}</code> 占位符生成详情页完整 URL。<span class="example">示例：<code>https://new.szggzy.com/jygg/details.html?contentId={id}</code></span></div>
+                </div>
+                <div class="form-group">
+                    <label>分类字段名 <span class="hint">(可选)</span></label>
+                    <input type="text" class="form-control" id="srcCategoryField" placeholder="noticeTypeName">
+                    <div class="field-help">如 API 直接返回分类名称（如"招标公告"），填此项可在下方做映射；不填则用标题关键词分类。</div>
+                </div>
+                <div class="form-group">
+                    <label>分类映射 <span class="hint">(每行一个：原始名称=统一分类)</span></label>
+                    <textarea class="form-control" id="srcCategoryMapping" rows="5" placeholder="招标公告=招标&#10;中标结果公示=中标&#10;变更公告=变更"></textarea>
+                    <div class="field-help">把 API 返回的分类名映射为统一分类（招标/中标/变更/新闻/招标计划/开通运营）。每行格式：<code>原始名=统一名</code>。不填则用标题关键词分类。</div>
                 </div>
             </div>
+
+            <!-- ===== 公共字段 ===== -->
             <div class="form-group">
                 <label>关键词 <span class="hint">(逗号分隔)</span></label>
                 <input type="text" class="form-control" id="srcKeywords" placeholder="招标,采购,中标,成交,公告">
+                <div class="field-help">系统只抓取标题中包含这些关键词的公告。用逗号分隔多个关键词，满足<b>任一</b>关键词即匹配。<br><span class="example">建议：招标,采购,中标,成交,公告,地铁,轨道,城轨,开通,运营</span></div>
             </div>
             <div class="form-row-3">
                 <div class="form-group">
                     <label>超时(秒)</label>
                     <input type="number" class="form-control" id="srcTimeout" value="15">
+                    <div class="field-help">请求该网站的超时时间。如果网站响应慢可适当增大。</div>
                 </div>
                 <div class="form-group">
                     <label>请求间隔(秒)</label>
                     <input type="number" class="form-control" id="srcInterval" value="2">
+                    <div class="field-help">连续两次请求之间的间隔，避免请求过快被网站拦截。建议 ≥ 2 秒。</div>
                 </div>
                 <div class="form-group">
                     <label>启用</label>
@@ -520,14 +863,8 @@
                         <option value="true">是</option>
                         <option value="false">否</option>
                     </select>
+                    <div class="field-help">添加后可先设为"否"，测试成功后再启用。</div>
                 </div>
-            </div>
-            <div class="form-group">
-                <label>详情页内容选择器 <span class="hint">(可选)</span></label>
-                <input type="text" class="form-control" id="srcDetailSelector" placeholder=".content, .article-content">
-            </div>
-            <div class="form-group">
-                <label><input type="checkbox" id="srcFetchDetail"> 抓取详情页内容</label>
             </div>
         </div>
         <div class="modal-footer">
@@ -657,6 +994,7 @@ document.querySelectorAll('.nav-menu li').forEach(li => {
         else if (page === 'sources') loadSources();
         else if (page === 'wechat') loadWechatSources();
         else if (page === 'items') loadItems(1);
+        else if (page === 'mileage') loadMileageStats();
         else if (page === 'logs') loadSendLogs();
         else if (page === 'email') loadEmailConfig();
         else if (page === 'schedule') loadScheduleConfig();
@@ -664,6 +1002,55 @@ document.querySelectorAll('.nav-menu li').forEach(li => {
 });
 
 // ===== 仪表盘 =====
+let dashboardStatesPage = 1;
+async function loadDashboardStatesPage(page) {
+    dashboardStatesPage = page;
+    try {
+        const res = await apiGet('/source-states?page=' + page + '&per_page=20');
+        if (!res.success) throw new Error(res.error);
+        // 直接重渲染 sourceStatesTable 区域
+        const d = res.data;
+        const totalStates = d.total;
+        if (d.items && d.items.length > 0) {
+            const statesRows = d.items.map(s => `
+                <tr>
+                    <td><span class="source-status-dot ${s.last_fetch_status==='success'?'dot-green':s.last_fetch_status==='failed'?'dot-red':'dot-gray'}"></span>${escapeHtml(s.name)}</td>
+                    <td class="td-mono">${fmtDateTime(s.last_fetch_time)}</td>
+                    <td>${s.last_fetch_status==='success' ? '<span class="badge badge-success">成功</span>' : s.last_fetch_status==='failed' ? '<span class="badge badge-danger">失败</span>' : '<span class="badge badge-secondary">未运行</span>'}</td>
+                    <td>${s.last_fetch_count || 0}</td>
+                    <td class="td-mono">${fmtDateTime(s.last_send_time)}</td>
+                    <td class="td-break" style="color:#999;font-size:12px">${escapeHtml(s.last_error || '')}</td>
+                </tr>
+            `).join('');
+            document.getElementById('sourceStatesTable').innerHTML = `
+                <table>
+                    <thead><tr>
+                        <th>数据源</th><th>上次抓取时间</th><th>状态</th><th>条目数</th><th>上次发送</th><th>错误信息</th>
+                    </tr></thead>
+                    <tbody>${statesRows}</tbody>
+                </table>
+            `;
+            const tp = d.total_pages || 1;
+            let pagHtml = `<button ${page<=1?'disabled':''} onclick="loadDashboardStatesPage(${page-1})">上一页</button>`;
+            for (let p = 1; p <= tp; p++) {
+                if (p === 1 || p === tp || Math.abs(p - page) <= 1) {
+                    pagHtml += `<button class="${p===page?'active':''}" onclick="loadDashboardStatesPage(${p})">${p}</button>`;
+                } else if (Math.abs(p - page) === 2) {
+                    pagHtml += '<span style="padding:0 4px">...</span>';
+                }
+            }
+            pagHtml += `<button ${page>=tp?'disabled':''} onclick="loadDashboardStatesPage(${page+1})">下一页</button>`;
+            pagHtml += `<span class="page-info">共 ${totalStates} 个源</span>`;
+            document.getElementById('sourceStatesPagination').innerHTML = pagHtml;
+        } else {
+            document.getElementById('sourceStatesTable').innerHTML = '<div class="empty-state"><div class="icon">📭</div>暂无行业动态</div>';
+            document.getElementById('sourceStatesPagination').innerHTML = '';
+        }
+    } catch(e) {
+        toast('加载数据源状态失败: ' + e.message, 'error');
+    }
+}
+
 async function loadDashboard() {
     try {
         const res = await apiGet('/dashboard');
@@ -671,6 +1058,12 @@ async function loadDashboard() {
         const d = res.data;
 
         // 统计卡片
+        const autoSendBadge = d.config_summary.auto_send !== false
+            ? '<span class="badge badge-success" style="font-size:11px">自动发送</span>'
+            : '<span class="badge badge-warning" style="font-size:11px">仅抓不送</span>';
+        const fetchOnStartBadge = d.config_summary.fetch_on_start !== false
+            ? '<span class="badge badge-success" style="font-size:11px">启动抓取</span>'
+            : '<span class="badge badge-secondary" style="font-size:11px">启动不抓</span>';
         document.getElementById('statsGrid').innerHTML = `
             <div class="stat-card">
                 <div class="label">总条目</div>
@@ -696,31 +1089,60 @@ async function loadDashboard() {
                 <div class="label">调度时间</div>
                 <div class="value" style="font-size:18px">${d.config_summary.schedule_times.join(' / ')}</div>
             </div>
+            <div class="stat-card">
+                <div class="label">里程数据 ${d.stats.mileage_latest_month ? '(' + d.stats.mileage_latest_month + ')' : ''}</div>
+                <div class="value primary" style="font-size:18px">${d.stats.mileage_records || 0} 条</div>
+                <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">${d.stats.mileage_cities || 0} 个城市</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">运行模式 ${autoSendBadge}</div>
+                <div style="font-size:13px;margin-top:8px;color:var(--text-secondary)">
+                    ${fetchOnStartBadge} · ${d.config_summary.auto_send !== false ? '自动发邮件' : '仅入库不发送'}<br>
+                    ${d.config_summary.auto_send === false ? '<span style="color:var(--warning)">💡 请在「行业动态」中手动选择发送</span>' : ''}
+                </div>
+            </div>
         `;
 
-        // 数据源状态表
+        // 数据源状态表（仪表盘分页）
+        const totalStates = d.source_states_total || (d.source_states ? d.source_states.length : 0);
         if (d.source_states && d.source_states.length > 0) {
+            const statesRows = d.source_states.map(s => `
+                <tr>
+                    <td><span class="source-status-dot ${s.last_fetch_status==='success'?'dot-green':s.last_fetch_status==='failed'?'dot-red':'dot-gray'}"></span>${escapeHtml(s.name)}</td>
+                    <td class="td-mono">${fmtDateTime(s.last_fetch_time)}</td>
+                    <td>${s.last_fetch_status==='success' ? '<span class="badge badge-success">成功</span>' : s.last_fetch_status==='failed' ? '<span class="badge badge-danger">失败</span>' : '<span class="badge badge-secondary">未运行</span>'}</td>
+                    <td>${s.last_fetch_count || 0}</td>
+                    <td class="td-mono">${fmtDateTime(s.last_send_time)}</td>
+                    <td class="td-break" style="color:#999;font-size:12px">${escapeHtml(s.last_error || '')}</td>
+                </tr>
+            `).join('');
             document.getElementById('sourceStatesTable').innerHTML = `
                 <table>
                     <thead><tr>
                         <th>数据源</th><th>上次抓取时间</th><th>状态</th><th>条目数</th><th>上次发送</th><th>错误信息</th>
                     </tr></thead>
-                    <tbody>
-                        ${d.source_states.map(s => `
-                            <tr>
-                                <td><span class="source-status-dot ${s.last_fetch_status==='success'?'dot-green':s.last_fetch_status==='failed'?'dot-red':'dot-gray'}"></span>${escapeHtml(s.name)}</td>
-                                <td class="td-mono">${fmtDateTime(s.last_fetch_time)}</td>
-                                <td>${s.last_fetch_status==='success' ? '<span class="badge badge-success">成功</span>' : s.last_fetch_status==='failed' ? '<span class="badge badge-danger">失败</span>' : '<span class="badge badge-secondary">未运行</span>'}</td>
-                                <td>${s.last_fetch_count || 0}</td>
-                                <td class="td-mono">${fmtDateTime(s.last_send_time)}</td>
-                                <td class="td-break" style="color:#999;font-size:12px">${escapeHtml(s.last_error || '')}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
+                    <tbody>${statesRows}</tbody>
                 </table>
             `;
+            // 仪表盘内分页：使用独立的状态变量
+            const perPage = 20;
+            const tp = Math.ceil(totalStates / perPage) || 1;
+            let sp = dashboardStatesPage;
+            if (sp > tp) sp = 1;
+            let pagHtml = `<button ${sp<=1?'disabled':''} onclick="loadDashboardStatesPage(${sp-1})">上一页</button>`;
+            for (let p = 1; p <= tp; p++) {
+                if (p === 1 || p === tp || Math.abs(p - sp) <= 1) {
+                    pagHtml += `<button class="${p===sp?'active':''}" onclick="loadDashboardStatesPage(${p})">${p}</button>`;
+                } else if (Math.abs(p - sp) === 2) {
+                    pagHtml += '<span style="padding:0 4px">...</span>';
+                }
+            }
+            pagHtml += `<button ${sp>=tp?'disabled':''} onclick="loadDashboardStatesPage(${sp+1})">下一页</button>`;
+            pagHtml += `<span class="page-info">共 ${totalStates} 个源</span>`;
+            document.getElementById('sourceStatesPagination').innerHTML = pagHtml;
         } else {
-            document.getElementById('sourceStatesTable').innerHTML = '<div class="empty-state"><div class="icon">📭</div>暂无抓取记录，点击上方"立即抓取"开始</div>';
+            document.getElementById('sourceStatesTable').innerHTML = '<div class="empty-state"><div class="icon">📭</div>暂无行业动态，点击上方"立即抓取"开始</div>';
+            document.getElementById('sourceStatesPagination').innerHTML = '';
         }
 
         // 发送记录
@@ -751,69 +1173,156 @@ async function loadDashboard() {
 
 // ===== 网站数据源 =====
 let sourcesCache = [];
-async function loadSources() {
+let sourcesCurrentPage = 1;
+let sourcesTotalPages = 1;
+async function loadSources(page = sourcesCurrentPage) {
+    sourcesCurrentPage = page;
     try {
-        const res = await apiGet('/sources');
+        const res = await apiGet('/sources?page=' + page + '&per_page=20');
         if (!res.success) throw new Error(res.error);
-        sourcesCache = res.data;
-        renderSources(sourcesCache);
+        sourcesCache = res.data.items;
+        sourcesTotalPages = res.data.total_pages || 1;
+        renderSources(sourcesCache, res.data, page);
     } catch(e) {
         document.getElementById('sourcesTable').innerHTML = '<div class="empty-state">加载失败: ' + escapeHtml(e.message) + '</div>';
     }
 }
 
-function renderSources(sources) {
+function renderSources(sources, meta, page) {
     if (!sources || sources.length === 0) {
         document.getElementById('sourcesTable').innerHTML = '<div class="empty-state"><div class="icon">🌐</div>暂无数据源，点击上方"添加网站源"开始</div>';
+        document.getElementById('sourcesPagination').innerHTML = '';
         return;
     }
+    // 按 type 渲染不同字段列
+    const rows = sources.map((s, i) => {
+        const globalIdx = (page - 1) * (meta.per_page || 20) + i + 1;
+        const isApi = (s.type || 'website') === 'api';
+        const typeBadge = isApi
+            ? '<span class="badge badge-warning">API</span>'
+            : '<span class="badge badge-info">网站</span>';
+        let infoCol;
+        if (isApi) {
+            const cm = s.category_mapping || {};
+            const cmText = Object.keys(cm).length
+                ? Object.entries(cm).map(([k,v])=>`<span class="badge badge-secondary">${escapeHtml(k)}→${escapeHtml(v)}</span>`).join(' ')
+                : '<span style="color:#999">（无映射）</span>';
+            infoCol = `
+                <td class="td-break td-mono">${escapeHtml(s.api_url || '-')}</td>
+                <td>${escapeHtml(s.method || 'POST')} · ch=${escapeHtml(String(s.channel_id || '-'))} · ${escapeHtml(String(s.page_size || 30))}/页 × ${escapeHtml(String(s.max_pages || 5))}页</td>
+                <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis">${cmText}</td>
+            `;
+        } else {
+            infoCol = `
+                <td class="td-break td-mono">${escapeHtml(s.url || '-')}</td>
+                <td class="td-mono">${escapeHtml(s.list_selector || '')}</td>
+                <td>${(s.keywords||[]).slice(0,3).map(k=>`<span class="badge badge-info">${escapeHtml(k)}</span>`).join(' ')}${(s.keywords||[]).length>3?` <span style="color:#999">+${(s.keywords||[]).length-3}</span>`:''}</td>
+            `;
+        }
+        return `
+            <tr>
+                <td>${globalIdx}</td>
+                <td><strong>${escapeHtml(s.name)}</strong> ${typeBadge}</td>
+                ${infoCol}
+                <td>${s.enabled !== false ? '<span class="badge badge-success">启用</span>' : '<span class="badge badge-secondary">禁用</span>'}</td>
+                <td>
+                    <button class="btn btn-outline btn-sm" onclick="openSourceModal(${i})">编辑</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteSource(${i})">删除</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
     document.getElementById('sourcesTable').innerHTML = `
         <table>
             <thead><tr>
-                <th>#</th><th>名称</th><th>URL</th><th>列表选择器</th><th>关键词</th><th>状态</th><th>操作</th>
+                <th>#</th><th>名称</th><th>URL/API</th><th>关键参数</th><th>关键词/分类映射</th><th>状态</th><th>操作</th>
             </tr></thead>
-            <tbody>
-                ${sources.map((s, i) => `
-                    <tr>
-                        <td>${i + 1}</td>
-                        <td><strong>${escapeHtml(s.name)}</strong></td>
-                        <td class="td-break td-mono">${escapeHtml(s.url)}</td>
-                        <td class="td-mono">${escapeHtml(s.list_selector || '')}</td>
-                        <td>${(s.keywords||[]).map(k=>`<span class="badge badge-info">${escapeHtml(k)}</span>`).join(' ')}</td>
-                        <td>${s.enabled !== false ? '<span class="badge badge-success">启用</span>' : '<span class="badge badge-secondary">禁用</span>'}</td>
-                        <td>
-                            <button class="btn btn-outline btn-sm" onclick="openSourceModal(${i})">编辑</button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteSource(${i})">删除</button>
-                        </td>
-                    </tr>
-                `).join('')}
-            </tbody>
+            <tbody>${rows}</tbody>
         </table>
     `;
+    // 分页
+    const tp = meta.total_pages || 1;
+    let pagHtml = `<button ${page<=1?'disabled':''} onclick="loadSources(${page-1})">上一页</button>`;
+    for (let p = 1; p <= tp; p++) {
+        if (p === 1 || p === tp || Math.abs(p - page) <= 2) {
+            pagHtml += `<button class="${p===page?'active':''}" onclick="loadSources(${p})">${p}</button>`;
+        } else if (Math.abs(p - page) === 3) {
+            pagHtml += '<span style="padding:0 4px">...</span>';
+        }
+    }
+    pagHtml += `<button ${page>=tp?'disabled':''} onclick="loadSources(${page+1})">下一页</button>`;
+    pagHtml += `<span class="page-info">共 ${meta.total} 条 · ${page}/${tp} 页</span>`;
+    document.getElementById('sourcesPagination').innerHTML = pagHtml;
+}
+
+function onSourceTypeChange() {
+    const t = document.getElementById('srcType').value;
+    document.getElementById('websiteFields').style.display = (t === 'website') ? 'block' : 'none';
+    document.getElementById('apiFields').style.display = (t === 'api') ? 'block' : 'none';
+    document.getElementById('sourceModalTitle').textContent =
+        (document.getElementById('srcIndex').value >= 0)
+            ? (t === 'api' ? '编辑API数据源' : '编辑网站数据源')
+            : (t === 'api' ? '添加API数据源' : '添加网站数据源');
 }
 
 function openSourceModal(index = -1) {
     const isEdit = index >= 0;
-    document.getElementById('sourceModalTitle').textContent = isEdit ? '编辑网站数据源' : '添加网站数据源';
-    document.getElementById('srcIndex').value = index;
+    // index 是当前页内本地索引，需转换为全局索引供 API 使用
+    const globalIndex = isEdit ? (sourcesCurrentPage - 1) * 20 + index : -1;
+    document.getElementById('srcIndex').value = globalIndex;
+    const s = isEdit ? sourcesCache[index] : null;
+    const type = (s && s.type) || 'website';
+    document.getElementById('srcType').value = type;
+    onSourceTypeChange();
 
-    if (isEdit) {
-        const s = sourcesCache[index];
+    if (isEdit && s) {
         document.getElementById('srcName').value = s.name || '';
+        // Website 字段
         document.getElementById('srcUrl').value = s.url || '';
         document.getElementById('srcListSelector').value = s.list_selector || '';
         document.getElementById('srcLinkPrefix').value = s.link_prefix || '';
         document.getElementById('srcTitleSelector').value = s.title_selector || 'a';
         document.getElementById('srcLinkSelector').value = s.link_selector || 'a';
         document.getElementById('srcDateSelector').value = s.date_selector || '';
+        document.getElementById('srcDetailSelector').value = s.detail_content_selector || '';
+        document.getElementById('srcFetchDetail').checked = s.fetch_detail === true;
+        // API 字段
+        document.getElementById('srcApiUrl').value = s.api_url || '';
+        document.getElementById('srcApiMethod').value = s.method || 'POST';
+        document.getElementById('srcChannelId').value = s.channel_id || '';
+        document.getElementById('srcPageSize').value = s.page_size || 30;
+        document.getElementById('srcMaxPages').value = s.max_pages || 5;
+        document.getElementById('srcVerifySsl').checked = s.verify_ssl !== false;
+        document.getElementById('srcDataPath').value = s.data_path || 'data.content';
+        document.getElementById('srcTitleField').value = s.title_field || 'title';
+        document.getElementById('srcDateField').value = s.date_field || 'releaseTime';
+        document.getElementById('srcIdField').value = s.id_field || 'id';
+        document.getElementById('srcDetailUrlTemplate').value = s.detail_url_template || '';
+        document.getElementById('srcCategoryField').value = s.category_field || '';
+        const cm = s.category_mapping || {};
+        document.getElementById('srcCategoryMapping').value =
+            Object.entries(cm).map(([k,v]) => `${k}=${v}`).join('\n');
+        // 公共字段
         document.getElementById('srcKeywords').value = (s.keywords || []).join(',');
         document.getElementById('srcTimeout').value = s.timeout || 15;
         document.getElementById('srcInterval').value = s.request_interval || 2;
         document.getElementById('srcEnabled').value = String(s.enabled !== false);
-        document.getElementById('srcDetailSelector').value = s.detail_content_selector || '';
-        document.getElementById('srcFetchDetail').checked = s.fetch_detail === true;
     } else {
-        ['srcName','srcUrl','srcListSelector','srcLinkPrefix','srcDateSelector','srcDetailSelector'].forEach(id => document.getElementById(id).value = '');
+        // 新增：清空所有字段
+        ['srcName','srcUrl','srcListSelector','srcLinkPrefix','srcDateSelector','srcDetailSelector',
+         'srcApiUrl','srcChannelId','srcDetailUrlTemplate','srcCategoryField'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.value = '';
+        });
+        document.getElementById('srcApiMethod').value = 'POST';
+        document.getElementById('srcPageSize').value = 30;
+        document.getElementById('srcMaxPages').value = 5;
+        document.getElementById('srcVerifySsl').checked = true;
+        document.getElementById('srcDataPath').value = 'data.content';
+        document.getElementById('srcTitleField').value = 'title';
+        document.getElementById('srcDateField').value = 'releaseTime';
+        document.getElementById('srcIdField').value = 'id';
+        document.getElementById('srcCategoryMapping').value = '';
         document.getElementById('srcTitleSelector').value = 'a';
         document.getElementById('srcLinkSelector').value = 'a';
         document.getElementById('srcKeywords').value = '招标,采购,中标,成交,公告';
@@ -825,27 +1334,66 @@ function openSourceModal(index = -1) {
     document.getElementById('sourceModal').classList.add('active');
 }
 
+function parseCategoryMapping(text) {
+    const map = {};
+    if (!text) return map;
+    text.split(/\r?\n/).forEach(line => {
+        const m = line.match(/^\s*(.+?)\s*[=:]\s*(.+?)\s*$/);
+        if (m) map[m[1]] = m[2];
+    });
+    return map;
+}
+
 async function saveSource() {
     const index = parseInt(document.getElementById('srcIndex').value);
     const name = document.getElementById('srcName').value.trim();
-    const url = document.getElementById('srcUrl').value.trim();
-    if (!name || !url) { toast('名称和URL不能为空', 'error'); return; }
+    const type = document.getElementById('srcType').value;
+    if (!name) { toast('名称不能为空', 'error'); return; }
+    if (type === 'website' && !document.getElementById('srcUrl').value.trim()) {
+        toast('网站类型需要填写 URL', 'error'); return;
+    }
+    if (type === 'api' && !document.getElementById('srcApiUrl').value.trim()) {
+        toast('API 类型需要填写 API URL', 'error'); return;
+    }
 
-    const source = {
-        name, url,
-        type: 'website',
+    const common = {
+        name,
+        type,
         enabled: document.getElementById('srcEnabled').value === 'true',
-        list_selector: document.getElementById('srcListSelector').value.trim(),
-        title_selector: document.getElementById('srcTitleSelector').value.trim() || 'a',
-        link_selector: document.getElementById('srcLinkSelector').value.trim() || 'a',
-        date_selector: document.getElementById('srcDateSelector').value.trim(),
-        link_prefix: document.getElementById('srcLinkPrefix').value.trim(),
         keywords: document.getElementById('srcKeywords').value.split(',').map(k=>k.trim()).filter(Boolean),
-        fetch_detail: document.getElementById('srcFetchDetail').checked,
-        detail_content_selector: document.getElementById('srcDetailSelector').value.trim(),
         timeout: parseInt(document.getElementById('srcTimeout').value) || 15,
         request_interval: parseFloat(document.getElementById('srcInterval').value) || 2,
     };
+
+    let source;
+    if (type === 'api') {
+        source = Object.assign(common, {
+            api_url: document.getElementById('srcApiUrl').value.trim(),
+            method: document.getElementById('srcApiMethod').value,
+            channel_id: document.getElementById('srcChannelId').value.trim(),
+            page_size: parseInt(document.getElementById('srcPageSize').value) || 30,
+            max_pages: parseInt(document.getElementById('srcMaxPages').value) || 5,
+            verify_ssl: document.getElementById('srcVerifySsl').checked,
+            data_path: document.getElementById('srcDataPath').value.trim() || 'data.content',
+            title_field: document.getElementById('srcTitleField').value.trim() || 'title',
+            date_field: document.getElementById('srcDateField').value.trim() || 'releaseTime',
+            id_field: document.getElementById('srcIdField').value.trim() || 'id',
+            detail_url_template: document.getElementById('srcDetailUrlTemplate').value.trim(),
+            category_field: document.getElementById('srcCategoryField').value.trim(),
+            category_mapping: parseCategoryMapping(document.getElementById('srcCategoryMapping').value),
+        });
+    } else {
+        source = Object.assign(common, {
+            url: document.getElementById('srcUrl').value.trim(),
+            list_selector: document.getElementById('srcListSelector').value.trim(),
+            title_selector: document.getElementById('srcTitleSelector').value.trim() || 'a',
+            link_selector: document.getElementById('srcLinkSelector').value.trim() || 'a',
+            date_selector: document.getElementById('srcDateSelector').value.trim(),
+            link_prefix: document.getElementById('srcLinkPrefix').value.trim(),
+            fetch_detail: document.getElementById('srcFetchDetail').checked,
+            detail_content_selector: document.getElementById('srcDetailSelector').value.trim(),
+        });
+    }
 
     try {
         let res;
@@ -857,7 +1405,7 @@ async function saveSource() {
         if (res.success) {
             toast(res.message);
             closeModal('sourceModal');
-            loadSources();
+            loadSources(1);
         } else {
             toast(res.error || '保存失败', 'error');
         }
@@ -867,10 +1415,12 @@ async function saveSource() {
 }
 
 async function deleteSource(index) {
+    // index 是当前页内本地索引，需转换为全局索引供 API 使用
+    const globalIndex = (sourcesCurrentPage - 1) * 20 + index;
     const s = sourcesCache[index];
     if (!confirm(`确定删除数据源「${s.name}」吗？`)) return;
     try {
-        const res = await apiDelete('/sources/' + index);
+        const res = await apiDelete('/sources/' + globalIndex);
         if (res.success) { toast(res.message); loadSources(); }
         else toast(res.error || '删除失败', 'error');
     } catch(e) { toast('删除失败: ' + e.message, 'error'); }
@@ -878,51 +1428,70 @@ async function deleteSource(index) {
 
 // ===== 公众号数据源 =====
 let wechatCache = [];
-async function loadWechatSources() {
+let wechatCurrentPage = 1;
+async function loadWechatSources(page = wechatCurrentPage) {
+    wechatCurrentPage = page;
     try {
-        const res = await apiGet('/wechat-sources');
+        const res = await apiGet('/wechat-sources?page=' + page + '&per_page=20');
         if (!res.success) throw new Error(res.error);
-        wechatCache = res.data;
-        renderWechat(wechatCache);
+        wechatCache = res.data.items;
+        renderWechat(wechatCache, res.data, page);
     } catch(e) {
         document.getElementById('wechatTable').innerHTML = '<div class="empty-state">加载失败: ' + escapeHtml(e.message) + '</div>';
     }
 }
 
-function renderWechat(sources) {
+function renderWechat(sources, meta, page) {
     if (!sources || sources.length === 0) {
         document.getElementById('wechatTable').innerHTML = '<div class="empty-state"><div class="icon">📱</div>暂无公众号源，点击上方"添加公众号"开始</div>';
+        document.getElementById('wechatPagination').innerHTML = '';
         return;
     }
+    const rows = sources.map((s, i) => {
+        const globalIdx = (page - 1) * (meta.per_page || 20) + i + 1;
+        return `
+            <tr>
+                <td>${globalIdx}</td>
+                <td><strong>${escapeHtml(s.name)}</strong></td>
+                <td>${escapeHtml(s.fetch_method || 'sogou')}</td>
+                <td class="td-mono">${escapeHtml(s.official_id || '-')}</td>
+                <td>${escapeHtml(s.search_keyword || '-')}</td>
+                <td>${s.enabled !== false ? '<span class="badge badge-success">启用</span>' : '<span class="badge badge-secondary">禁用</span>'}</td>
+                <td>
+                    <button class="btn btn-outline btn-sm" onclick="openWechatModal(${i})">编辑</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteWechat(${i})">删除</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
     document.getElementById('wechatTable').innerHTML = `
         <table>
             <thead><tr>
                 <th>#</th><th>名称</th><th>抓取方式</th><th>公众号ID</th><th>搜索关键词</th><th>状态</th><th>操作</th>
             </tr></thead>
-            <tbody>
-                ${sources.map((s, i) => `
-                    <tr>
-                        <td>${i + 1}</td>
-                        <td><strong>${escapeHtml(s.name)}</strong></td>
-                        <td>${escapeHtml(s.fetch_method || 'sogou')}</td>
-                        <td class="td-mono">${escapeHtml(s.official_id || '-')}</td>
-                        <td>${escapeHtml(s.search_keyword || '-')}</td>
-                        <td>${s.enabled !== false ? '<span class="badge badge-success">启用</span>' : '<span class="badge badge-secondary">禁用</span>'}</td>
-                        <td>
-                            <button class="btn btn-outline btn-sm" onclick="openWechatModal(${i})">编辑</button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteWechat(${i})">删除</button>
-                        </td>
-                    </tr>
-                `).join('')}
-            </tbody>
+            <tbody>${rows}</tbody>
         </table>
     `;
+    const tp = meta.total_pages || 1;
+    let pagHtml = `<button ${page<=1?'disabled':''} onclick="loadWechatSources(${page-1})">上一页</button>`;
+    for (let p = 1; p <= tp; p++) {
+        if (p === 1 || p === tp || Math.abs(p - page) <= 2) {
+            pagHtml += `<button class="${p===page?'active':''}" onclick="loadWechatSources(${p})">${p}</button>`;
+        } else if (Math.abs(p - page) === 3) {
+            pagHtml += '<span style="padding:0 4px">...</span>';
+        }
+    }
+    pagHtml += `<button ${page>=tp?'disabled':''} onclick="loadWechatSources(${page+1})">下一页</button>`;
+    pagHtml += `<span class="page-info">共 ${meta.total} 条 · ${page}/${tp} 页</span>`;
+    document.getElementById('wechatPagination').innerHTML = pagHtml;
 }
 
 function openWechatModal(index = -1) {
     const isEdit = index >= 0;
+    // index 是当前页内本地索引，需转换为全局索引供 API 使用
+    const globalIndex = isEdit ? (wechatCurrentPage - 1) * 20 + index : -1;
     document.getElementById('wechatModalTitle').textContent = isEdit ? '编辑公众号数据源' : '添加公众号数据源';
-    document.getElementById('wxIndex').value = index;
+    document.getElementById('wxIndex').value = globalIndex;
 
     if (isEdit) {
         const s = wechatCache[index];
@@ -974,26 +1543,128 @@ async function saveWechat() {
 }
 
 async function deleteWechat(index) {
+    // index 是当前页内本地索引，需转换为全局索引供 API 使用
+    const globalIndex = (wechatCurrentPage - 1) * 20 + index;
     const s = wechatCache[index];
     if (!confirm(`确定删除公众号「${s.name}」吗？`)) return;
     try {
-        const res = await apiDelete('/wechat-sources/' + index);
+        const res = await apiDelete('/wechat-sources/' + globalIndex);
         if (res.success) { toast(res.message); loadWechatSources(); }
         else toast(res.error || '删除失败', 'error');
     } catch(e) { toast('删除失败: ' + e.message, 'error'); }
 }
 
-// ===== 抓取记录 =====
+// ===== 行业动态 =====
 let itemsCurrentPage = 1;
+let itemsSearchTimer = null;
+let categoriesCache = [];
+
+// 动态加载类别下拉框
+async function loadCategories() {
+    try {
+        const res = await apiGet('/categories');
+        if (!res.success) throw new Error(res.error);
+        categoriesCache = res.data || [];
+        const sel = document.getElementById('filterCategory');
+        const currentVal = sel ? sel.value : '';
+        if (!sel) return;
+        let html = '<option value="">全部分类</option>';
+        categoriesCache.forEach(cat => {
+            html += `<option value="${escapeHtml(cat)}" ${cat === currentVal ? 'selected' : ''}>${escapeHtml(cat)}</option>`;
+        });
+        html += `<option value="__uncategorized__" ${currentVal === '__uncategorized__' ? 'selected' : ''}>未分类</option>`;
+        sel.innerHTML = html;
+    } catch(e) {
+        // 静默失败，保留默认选项
+        console.error('加载类别失败:', e);
+    }
+}
+
+function clearSearch() {
+    document.getElementById('filterKeyword').value = '';
+    loadItems(1);
+}
+
+function clearDateFilter() {
+    document.getElementById('filterDateFrom').value = '';
+    document.getElementById('filterDateTo').value = '';
+    loadItems(1);
+}
+
+// 搜索框防抖
+function initSearchDebounce() {
+    const input = document.getElementById('filterKeyword');
+    if (!input) return;
+    input.addEventListener('input', () => {
+        clearTimeout(itemsSearchTimer);
+        itemsSearchTimer = setTimeout(() => loadItems(1), 400);
+    });
+}
+
+function highlightText(text, keyword) {
+    if (!keyword || !text) return escapeHtml(text);
+    const safeKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${safeKeyword})`, 'gi');
+    return escapeHtml(text).replace(regex, '<span class="highlight">$1</span>');
+}
+
+function isSogouLink(url) {
+    return url && url.includes('weixin.sogou.com');
+}
+
+function renderItemTitle(item, keyword) {
+    const titleHtml = highlightText(item.title, keyword);
+    if (!isSogouLink(item.url)) {
+        return `<a href="${escapeHtml(item.url)}" target="_blank" style="color:var(--primary);text-decoration:none">${titleHtml}</a>`;
+    }
+    return `
+        <div class="sogou-link-wrap">
+            <a href="${escapeHtml(item.url)}" target="_blank" title="搜狗微信搜索链接，可能需要完成验证后才能访问原文">${titleHtml}</a>
+            <span class="sogou-badge">搜狗</span>
+            <div class="link-actions">
+                <button onclick="copyToClipboard('${escapeHtml(item.url)}')" title="复制链接">复制链接</button>
+                <button onclick="window.open('${escapeHtml(item.url)}','_blank')" title="在新标签打开">尝试打开</button>
+            </div>
+            <div class="sogou-tip">
+                <strong>提示：</strong>此链接来自搜狗微信搜索，点击后可能需要完成图形验证码才能查看原文。部分文章被微信限制，只能在微信 App 内打开。建议复制链接后粘贴到浏览器地址栏访问，或直接在微信中搜索文章标题。
+            </div>
+        </div>`;
+}
+
+function copyToClipboard(text) {
+    if (!text) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => toast('链接已复制', 'success'));
+    } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        toast('链接已复制', 'success');
+    }
+}
+
 async function loadItems(page = 1) {
     itemsCurrentPage = page;
+    // 首次加载时初始化类别
+    if (categoriesCache.length === 0) {
+        await loadCategories();
+    }
     const source = document.getElementById('filterSource').value;
+    const category = document.getElementById('filterCategory').value;
     const status = document.getElementById('filterStatus').value;
-    const keyword = document.getElementById('filterKeyword').value;
+    const keyword = document.getElementById('filterKeyword').value.trim();
+    const dateFrom = document.getElementById('filterDateFrom').value;
+    const dateTo = document.getElementById('filterDateTo').value;
     const params = new URLSearchParams({page, per_page: 20});
     if (source) params.set('source', source);
+    if (category) params.set('category', category);
     if (status) params.set('status', status);
     if (keyword) params.set('keyword', keyword);
+    if (dateFrom) params.set('date_from', dateFrom);
+    if (dateTo) params.set('date_to', dateTo);
 
     try {
         const res = await apiGet('/items?' + params.toString());
@@ -1006,7 +1677,7 @@ async function loadItems(page = 1) {
 
         const d = res.data;
         if (!d.items || d.items.length === 0) {
-            document.getElementById('itemsTable').innerHTML = '<div class="empty-state"><div class="icon">📋</div>暂无抓取记录</div>';
+            document.getElementById('itemsTable').innerHTML = '<div class="empty-state"><div class="icon">📋</div>暂无行业动态</div>';
             document.getElementById('itemsPagination').innerHTML = '';
             return;
         }
@@ -1014,13 +1685,15 @@ async function loadItems(page = 1) {
         document.getElementById('itemsTable').innerHTML = `
             <table>
                 <thead><tr>
+                    <th style="width:32px"><input type="checkbox" id="selectAllCheckbox" onchange="selectAllOnPage(this.checked)"></th>
                     <th>#</th><th>标题</th><th>来源</th><th>日期</th><th>类别</th><th>状态</th><th>抓取时间</th>
                 </tr></thead>
                 <tbody>
                     ${d.items.map((item, i) => `
                         <tr>
+                            <td><input type="checkbox" class="item-checkbox" value="${escapeHtml(item.item_id)}" onchange="updateSelectedCount()"></td>
                             <td>${(d.page - 1) * d.per_page + i + 1}</td>
-                            <td class="td-break"><a href="${escapeHtml(item.url)}" target="_blank" style="color:var(--primary);text-decoration:none">${escapeHtml(item.title)}</a></td>
+                            <td class="td-break">${renderItemTitle(item, keyword)}</td>
                             <td>${escapeHtml(item.source)}</td>
                             <td class="td-mono">${escapeHtml(item.publish_date || '-')}</td>
                             <td>${escapeHtml(item.category || '-')}</td>
@@ -1051,33 +1724,423 @@ async function loadItems(page = 1) {
     }
 }
 
-// ===== 发送日志 =====
-async function loadSendLogs() {
+// 页面加载时初始化搜索防抖
+initSearchDebounce();
+
+// ===== 行业动态：选择与手动发送 =====
+function selectAllOnPage(checked) {
+    document.querySelectorAll('.item-checkbox').forEach(cb => {
+        cb.checked = checked;
+    });
+    updateSelectedCount();
+}
+
+function toggleSelectAll() {
+    const headerCb = document.getElementById('selectAllCheckbox');
+    const allCbs = document.querySelectorAll('.item-checkbox');
+    if (!allCbs.length) return;
+    const allChecked = Array.from(allCbs).every(cb => cb.checked);
+    selectAllOnPage(!allChecked);
+    if (headerCb) headerCb.checked = !allChecked;
+}
+
+function getSelectedIds() {
+    return Array.from(document.querySelectorAll('.item-checkbox:checked'))
+        .map(cb => cb.value);
+}
+
+function updateSelectedCount() {
+    const count = getSelectedIds().length;
+    const el = document.getElementById('selectedCount');
+    if (el) {
+        el.textContent = count > 0 ? `已选择 ${count} 条` : '';
+    }
+    // 更新表头复选框状态
+    const headerCb = document.getElementById('selectAllCheckbox');
+    const allCbs = document.querySelectorAll('.item-checkbox');
+    if (headerCb && allCbs.length) {
+        const allChecked = Array.from(allCbs).every(cb => cb.checked);
+        const someChecked = Array.from(allCbs).some(cb => cb.checked);
+        headerCb.checked = allChecked;
+        headerCb.indeterminate = someChecked && !allChecked;
+    }
+}
+
+async function sendSelectedItems() {
+    const ids = getSelectedIds();
+    if (!ids.length) {
+        toast('请先选择要发送的记录', 'error');
+        return;
+    }
+    if (!confirm(`确定发送选中的 ${ids.length} 条记录到邮箱吗？`)) return;
+    toast('正在发送...', 'info');
     try {
-        const res = await apiGet('/send-logs?limit=50');
+        const res = await apiPost('/send-items', { item_ids: ids });
+        if (res.success) {
+            toast(res.message || `已发送 ${ids.length} 条记录`);
+            loadItems(itemsCurrentPage);
+        } else {
+            toast(res.error || '发送失败', 'error');
+        }
+    } catch(e) {
+        toast('发送失败: ' + e.message, 'error');
+    }
+}
+
+// ===== 里程统计 =====
+async function loadMileageStats() {
+    try {
+        const [statsRes, annualRes, systemRes, cityRes, cityTrendRes] = await Promise.all([
+            apiGet('/transit-stats'),
+            apiGet('/transit-annual-trend'),
+            apiGet('/transit-system-types'),
+            apiGet('/transit-cities'),
+            apiGet('/transit-city-trend')
+        ]);
+
+        // 统计概要
+        if (statsRes.success) {
+            const s = statsRes.data;
+            document.getElementById('mileageStatsGrid').innerHTML = `
+                <div class="stat-card"><div class="label">最新数据月份</div><div class="value primary">${s.latest_month || '-'}</div></div>
+                <div class="stat-card"><div class="label">运营总里程</div><div class="value success">${s.operational_km ? s.operational_km.toFixed(1) : '-'} km</div></div>
+                <div class="stat-card"><div class="label">覆盖城市</div><div class="value primary">${s.cities || '-'}</div></div>
+                <div class="stat-card"><div class="label">数据记录</div><div class="value">${s.total_records || '-'}</div></div>
+            `;
+        }
+
+        // 全国年度趋势图
+        if (annualRes.success && annualRes.data.length > 0) {
+            renderNationalTrend(annualRes.data);
+        } else {
+            document.getElementById('annualTrendChart').innerHTML = '<div class="empty-state"><div class="icon">📭</div>暂无年度里程数据，请先点击"加载历史数据"按钮</div>';
+        }
+
+        // 制式分类统计
+        if (systemRes.success && systemRes.data.length > 0) {
+            renderSystemTypeBreakdown(systemRes.data);
+        } else {
+            document.getElementById('systemTypeBreakdown').innerHTML = '<div class="empty-state"><div class="icon">📭</div>暂无制式分类数据</div>';
+        }
+
+        // 城市排名表
+        if (cityRes.success && cityRes.data.length > 0) {
+            renderCityRanking(cityRes.data);
+        } else {
+            document.getElementById('cityRankingTable').innerHTML = '<div class="empty-state"><div class="icon">📭</div>暂无城市维度数据</div>';
+        }
+
+        // 城市年度趋势图
+        if (cityTrendRes.success && cityTrendRes.data.length > 0) {
+            renderCityTrend(cityTrendRes.data);
+        } else {
+            document.getElementById('cityTrendChart').innerHTML = '<div class="empty-state"><div class="icon">📭</div>暂无城市趋势数据</div>';
+        }
+    } catch (e) {
+        document.getElementById('mileageStatsGrid').innerHTML = '<div class="empty-state">加载失败: ' + escapeHtml(e.message) + '</div>';
+    }
+}
+
+function renderNationalTrend(data) {
+    // data: [{year, data_month, cities, lines, total_km, by_type: {"地铁": {km, lines, cities}, "其他": {km, lines, cities}}}]
+    const years = data.map(d => d.year);
+    const totalKms = data.map(d => d.total_km || 0);
+    const metroKms = data.map(d => (d.by_type && d.by_type['地铁']) ? d.by_type['地铁'].km : 0);
+    const otherKms = data.map(d => {
+        if (!d.by_type) return 0;
+        return Object.entries(d.by_type)
+            .filter(([k]) => k !== '地铁')
+            .reduce((sum, [, v]) => sum + (v.km || 0), 0);
+    });
+    const cities = data.map(d => d.cities || 0);
+    const lines = data.map(d => d.lines || 0);
+
+    const maxKm = Math.max(...totalKms, 1);
+    const chartHeight = 280;
+    const barAreaW = Math.max(years.length * 20, 600);
+    const barWidth = Math.max(8, Math.min(30, (barAreaW / years.length) - 6));
+
+    let barsHtml = '';
+    years.forEach((y, i) => {
+        const totalKm = totalKms[i];
+        const metroKm = metroKms[i];
+        const otherKm = otherKms[i];
+        const metroH = (metroKm / maxKm) * chartHeight;
+        const otherH = (otherKm / maxKm) * chartHeight;
+        const totalH = metroH + otherH;
+
+        barsHtml += `
+            <div style="display:inline-block;text-align:center;margin:0 1px;vertical-align:bottom;position:relative" title="${y}年: 总计${totalKm.toFixed(0)}km (地铁${metroKm.toFixed(0)}km / 其他${otherKm.toFixed(0)}km)">
+                <div style="font-size:9px;color:var(--text-secondary);margin-bottom:2px">${totalKm > 0 ? totalKm.toFixed(0) : ''}</div>
+                <div style="width:${barWidth}px;display:flex;flex-direction:column-reverse">
+                    <div style="height:${metroH}px;background:linear-gradient(180deg,#e53935,#c62828);border-radius:0 0 3px 3px;min-height:${metroKm > 0 ? '2px' : '0'}"></div>
+                    <div style="height:${otherH}px;background:linear-gradient(180deg,#1e88e5,#1565c0);min-height:${otherKm > 0 ? '2px' : '0'}"></div>
+                </div>
+                <div style="font-size:8px;color:var(--text-secondary);margin-top:3px">${y}</div>
+            </div>
+        `;
+    });
+
+    const lastData = data[data.length - 1];
+    document.getElementById('annualTrendChart').innerHTML = `
+        <div style="overflow-x:auto;padding:10px 0">
+            <div style="display:flex;align-items:flex-end;justify-content:flex-start;height:${chartHeight + 50}px;min-width:${barAreaW}px">
+                ${barsHtml}
+            </div>
+        </div>
+        <div style="display:flex;gap:16px;justify-content:center;margin-top:8px;font-size:12px;color:var(--text-secondary)">
+            <span><span style="display:inline-block;width:10px;height:10px;background:#e53935;border-radius:2px;vertical-align:middle;margin-right:4px"></span>地铁里程</span>
+            <span><span style="display:inline-block;width:10px;height:10px;background:#1e88e5;border-radius:2px;vertical-align:middle;margin-right:4px"></span>其他制式(轻轨/单轨/市域/有轨电车等)</span>
+            <span>🏙️ ${lastData.cities || '-'}城</span>
+            <span>🚇 ${lastData.lines || '-'}线</span>
+        </div>
+    `;
+}
+
+function renderSystemTypeBreakdown(data) {
+    // data: [{system_type, line_count, total_km, city_count, total_stations}, ...]
+    const totalKm = data.reduce((s, d) => s + (d.total_km || 0), 0);
+    const totalLines = data.reduce((s, d) => s + (d.line_count || 0), 0);
+
+    let rows = data.map((d, i) => {
+        const pct = totalKm > 0 ? ((d.total_km / totalKm) * 100).toFixed(1) : '0.0';
+        const isMetro = d.system_type === '地铁';
+        const color = isMetro ? '#e53935' : '#1e88e5';
+        return `
+            <tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:8px 12px">
+                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:6px;vertical-align:middle"></span>
+                    <span style="font-weight:${isMetro ? '600' : '400'}">${escapeHtml(d.system_type || '-')}</span>
+                </td>
+                <td style="padding:8px 12px;text-align:right">${d.line_count || '-'}</td>
+                <td style="padding:8px 12px;text-align:right;font-weight:600;color:var(--primary)">${d.total_km ? d.total_km.toFixed(1) : '-'} km</td>
+                <td style="padding:8px 12px;text-align:right">${pct}%</td>
+                <td style="padding:8px 12px;text-align:right">${d.city_count || '-'}</td>
+                <td style="padding:8px 12px;text-align:right">${d.total_stations || '-'}</td>
+            </tr>
+        `;
+    }).join('');
+
+    // 总计行
+    rows += `
+        <tr style="border-top:2px solid var(--border);font-weight:600;background:var(--primary-light)">
+            <td style="padding:8px 12px">合计</td>
+            <td style="padding:8px 12px;text-align:right">${totalLines}</td>
+            <td style="padding:8px 12px;text-align:right;color:var(--primary)">${totalKm.toFixed(1)} km</td>
+            <td style="padding:8px 12px;text-align:right">100%</td>
+            <td style="padding:8px 12px;text-align:right" colspan="2"></td>
+        </tr>
+    `;
+
+    document.getElementById('systemTypeBreakdown').innerHTML = `
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead>
+                <tr style="border-bottom:2px solid var(--border)">
+                    <th style="padding:8px 12px;text-align:left">制式类型</th>
+                    <th style="padding:8px 12px;text-align:right">线路数</th>
+                    <th style="padding:8px 12px;text-align:right">里程(km)</th>
+                    <th style="padding:8px 12px;text-align:right">占比</th>
+                    <th style="padding:8px 12px;text-align:right">城市数</th>
+                    <th style="padding:8px 12px;text-align:right">车站数</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    `;
+}
+
+function renderCityRanking(data) {
+    // data: [{city, system_name, line_count, total_km, total_stations, first_opening, system_types, statuses}, ...]
+    let rows = data.slice(0, 50).map((c, i) => {
+        const types = (c.system_types || '').split(',').filter(t => t).join('、');
+        return `
+            <tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:6px 10px;color:var(--text-secondary)">${i + 1}</td>
+                <td style="padding:6px 10px;font-weight:600">${escapeHtml(c.city)}</td>
+                <td style="padding:6px 10px;color:var(--text-secondary)">${escapeHtml(c.system_name || '-')}</td>
+                <td style="padding:6px 10px;text-align:right">${c.line_count || '-'}</td>
+                <td style="padding:6px 10px;text-align:right;font-weight:600;color:var(--primary)">${c.total_km ? c.total_km.toFixed(1) : '-'} km</td>
+                <td style="padding:6px 10px;text-align:right">${c.total_stations || '-'}</td>
+                <td style="padding:6px 10px;font-size:11px;color:var(--text-secondary)">${escapeHtml(types || '-')}</td>
+                <td style="padding:6px 10px;color:var(--text-secondary)">${c.first_opening || '-'}</td>
+            </tr>
+        `;
+    }).join('');
+
+    document.getElementById('cityRankingTable').innerHTML = `
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead>
+                <tr style="border-bottom:2px solid var(--border)">
+                    <th style="padding:8px 10px;text-align:left">#</th>
+                    <th style="padding:8px 10px;text-align:left">城市</th>
+                    <th style="padding:8px 10px;text-align:left">系统</th>
+                    <th style="padding:8px 10px;text-align:right">线路数</th>
+                    <th style="padding:8px 10px;text-align:right">里程(km)</th>
+                    <th style="padding:8px 10px;text-align:right">车站数</th>
+                    <th style="padding:8px 10px;text-align:left">制式构成</th>
+                    <th style="padding:8px 10px;text-align:left">首条开通</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    `;
+}
+
+function renderCityTrend(data) {
+    // data: [{city, year, cumulative_km, cumulative_lines, by_type: {"地铁": km, ...}}, ...]
+    // Group by city
+    const cityMap = {};
+    data.forEach(d => {
+        if (!cityMap[d.city]) cityMap[d.city] = [];
+        cityMap[d.city].push({year: d.year, km: d.cumulative_km || 0, lines: d.cumulative_lines || 0});
+    });
+
+    // Top 10 cities by latest km
+    const cityKms = Object.entries(cityMap).map(([city, arr]) => ({
+        city, latestKm: arr[arr.length - 1].km, data: arr
+    })).sort((a, b) => b.latestKm - a.latestKm).slice(0, 10);
+
+    const colors = ['#e53935', '#1e88e5', '#43a047', '#fb8c00', '#8e24aa',
+                    '#00897b', '#d81b60', '#6d4c41', '#3949ab', '#7cb342'];
+
+    const allYears = [...new Set(data.map(d => d.year))].sort();
+    const chartHeight = 300;
+
+    let legendHtml = cityKms.map((c, i) => `
+        <span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;font-size:11px">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${colors[i]}"></span>
+            ${escapeHtml(c.city)} (${c.latestKm.toFixed(0)}km)
+        </span>
+    `).join('');
+
+    // SVG line chart
+    const width = 680;
+    const height = chartHeight;
+    const padding = {top: 20, right: 20, bottom: 40, left: 55};
+    const chartW = width - padding.left - padding.right;
+    const chartH = height - padding.top - padding.bottom;
+
+    const maxKm = Math.max(...cityKms.flatMap(c => c.data.map(d => d.km)), 100);
+    const xScale = (i) => padding.left + (allYears.length > 1 ? (i / (allYears.length - 1)) * chartW : chartW / 2);
+    const yScale = (km) => padding.top + chartH - (km / maxKm) * chartH;
+
+    let linesHtml = '';
+    cityKms.forEach((c, idx) => {
+        const points = c.data.map((d, i) => {
+            const x = xScale(allYears.indexOf(d.year));
+            const y = yScale(d.km);
+            return `${x},${y}`;
+        }).join(' ');
+
+        linesHtml += `<polyline points="${points}" fill="none" stroke="${colors[idx]}" stroke-width="2" />`;
+        // Points (only every few years to avoid clutter)
+        c.data.forEach((d, i) => {
+            if (i % Math.max(1, Math.floor(c.data.length / 8)) === 0 || i === c.data.length - 1) {
+                const x = xScale(allYears.indexOf(d.year));
+                const y = yScale(d.km);
+                linesHtml += `<circle cx="${x}" cy="${y}" r="3" fill="${colors[idx]}" />`;
+            }
+        });
+    });
+
+    // Y axis labels
+    let yAxisHtml = '';
+    for (let i = 0; i <= 4; i++) {
+        const km = (maxKm / 4) * i;
+        const y = yScale(km);
+        yAxisHtml += `<text x="${padding.left - 8}" y="${y + 4}" text-anchor="end" font-size="10" fill="var(--text-secondary)">${km.toFixed(0)}</text>`;
+        yAxisHtml += `<line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="var(--border)" stroke-width="1" stroke-dasharray="2,2" />`;
+    }
+
+    // X axis labels (every 5 years)
+    let xAxisHtml = '';
+    allYears.forEach((yr, i) => {
+        if (i % Math.max(1, Math.floor(allYears.length / 10)) === 0 || i === allYears.length - 1) {
+            const x = xScale(i);
+            xAxisHtml += `<text x="${x}" y="${height - padding.bottom + 16}" text-anchor="middle" font-size="10" fill="var(--text-secondary)">${yr}</text>`;
+        }
+    });
+
+    document.getElementById('cityTrendChart').innerHTML = `
+        <div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:4px">${legendHtml}</div>
+        <svg width="${width}" height="${height}" style="max-width:100%;overflow:visible">
+            ${yAxisHtml}
+            ${linesHtml}
+            ${xAxisHtml}
+            <text x="${padding.left - 40}" y="${padding.top + chartH / 2}" text-anchor="middle" font-size="10" fill="var(--text-secondary)" transform="rotate(-90 ${padding.left - 40} ${padding.top + chartH / 2})">累计里程(km)</text>
+        </svg>
+    `;
+}
+
+async function seedHistoryData() {
+    const statusEl = document.getElementById('seedStatus');
+    const btn = event.target;
+    btn.disabled = true;
+    statusEl.textContent = '正在加载历史数据...';
+
+    try {
+        const res = await fetch('/api/seed-history', {method: 'POST'});
+        const result = await res.json();
+        if (result.success) {
+            const d = result.data;
+            statusEl.innerHTML = `<span style="color:#4CAF50">✓ 加载成功: ${d.annual_records || 0} 条年度数据 + ${d.line_records || 0} 条线路明细</span>`;
+            // 重新加载页面数据
+            setTimeout(() => loadMileageStats(), 500);
+        } else {
+            statusEl.innerHTML = `<span style="color:#f44336">✗ 加载失败: ${escapeHtml(result.error)}</span>`;
+        }
+    } catch (e) {
+        statusEl.innerHTML = `<span style="color:#f44336">✗ 错误: ${escapeHtml(e.message)}</span>`;
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+// ===== 发送日志 =====
+let sendLogsCurrentPage = 1;
+async function loadSendLogs(page = sendLogsCurrentPage) {
+    sendLogsCurrentPage = page;
+    try {
+        const res = await apiGet('/send-logs?page=' + page + '&per_page=20');
         if (!res.success) throw new Error(res.error);
-        const logs = res.data;
+        const d = res.data;
+        const logs = d.items;
         if (!logs || logs.length === 0) {
             document.getElementById('sendLogsTable').innerHTML = '<div class="empty-state"><div class="icon">📧</div>暂无发送记录</div>';
+            document.getElementById('sendLogsPagination').innerHTML = '';
             return;
         }
+        const rows = logs.map((l, i) => {
+            const globalIdx = (page - 1) * (d.per_page || 20) + i + 1;
+            return `
+                <tr>
+                    <td>${globalIdx}</td>
+                    <td class="td-mono">${fmtDateTime(l.sent_at)}</td>
+                    <td>${l.item_count}</td>
+                    <td class="td-break">${escapeHtml(l.recipients)}</td>
+                    <td>${l.status==='success' ? '<span class="badge badge-success">成功</span>' : '<span class="badge badge-danger">失败</span>'}</td>
+                    <td class="td-break" style="color:#999;font-size:12px">${escapeHtml(l.error_msg || '')}</td>
+                </tr>
+            `;
+        }).join('');
         document.getElementById('sendLogsTable').innerHTML = `
             <table>
                 <thead><tr><th>#</th><th>发送时间</th><th>条目数</th><th>收件人</th><th>状态</th><th>错误信息</th></tr></thead>
-                <tbody>
-                    ${logs.map((l, i) => `
-                        <tr>
-                            <td>${i + 1}</td>
-                            <td class="td-mono">${fmtDateTime(l.sent_at)}</td>
-                            <td>${l.item_count}</td>
-                            <td class="td-break">${escapeHtml(l.recipients)}</td>
-                            <td>${l.status==='success' ? '<span class="badge badge-success">成功</span>' : '<span class="badge badge-danger">失败</span>'}</td>
-                            <td class="td-break" style="color:#999;font-size:12px">${escapeHtml(l.error_msg || '')}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
+                <tbody>${rows}</tbody>
             </table>
         `;
+        const tp = d.total_pages || 1;
+        let pagHtml = `<button ${page<=1?'disabled':''} onclick="loadSendLogs(${page-1})">上一页</button>`;
+        for (let p = 1; p <= tp; p++) {
+            if (p === 1 || p === tp || Math.abs(p - page) <= 2) {
+                pagHtml += `<button class="${p===page?'active':''}" onclick="loadSendLogs(${p})">${p}</button>`;
+            } else if (Math.abs(p - page) === 3) {
+                pagHtml += '<span style="padding:0 4px">...</span>';
+            }
+        }
+        pagHtml += `<button ${page>=tp?'disabled':''} onclick="loadSendLogs(${page+1})">下一页</button>`;
+        pagHtml += `<span class="page-info">共 ${d.total} 条 · ${page}/${tp} 页</span>`;
+        document.getElementById('sendLogsPagination').innerHTML = pagHtml;
     } catch(e) {
         document.getElementById('sendLogsTable').innerHTML = '<div class="empty-state">加载失败</div>';
     }
@@ -1089,7 +2152,31 @@ async function loadEmailConfig() {
         const res = await apiGet('/email');
         if (!res.success) throw new Error(res.error);
         const e = res.data;
+
+        // 判断发件邮箱的域名，高亮匹配的提供商预设
+        const emailDomain = (e.sender || '').split('@')[1] || '';
+
         document.getElementById('emailForm').innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                <div style="font-size:13px;color:var(--text-secondary)">
+                    💡 <strong>快捷预设</strong>：选择邮箱类型自动填入正确的服务器和端口
+                </div>
+                <button class="btn btn-outline btn-sm" onclick="diagnoseSmtp()">🔍 SMTP 连接诊断</button>
+            </div>
+            <div class="form-group">
+                <label>快速配置</label>
+                <select class="form-control" id="emailProviderPreset" onchange="applyProviderPreset(this.value)">
+                    <option value="">— 手动配置 —</option>
+                    <option value="qq.com">QQ邮箱 (smtp.qq.com:465 SSL)</option>
+                    <option value="163.com">163邮箱 (smtp.163.com:465 SSL)</option>
+                    <option value="126.com">126邮箱 (smtp.126.com:465 SSL)</option>
+                    <option value="yeah.net">Yeah邮箱 (smtp.yeah.net:465 SSL)</option>
+                    <option value="sina.com">新浪邮箱 (smtp.sina.com:465 SSL)</option>
+                    <option value="gmail.com">Gmail (smtp.gmail.com:587 STARTTLS)</option>
+                    <option value="outlook.com">Outlook (smtp-mail.outlook.com:587)</option>
+                    <option value="aliyun.com">阿里企业邮箱 (smtp.aliyun.com:465)</option>
+                </select>
+            </div>
             <div class="form-row">
                 <div class="form-group">
                     <label>SMTP 服务器</label>
@@ -1101,42 +2188,227 @@ async function loadEmailConfig() {
                 </div>
             </div>
             <div class="form-group">
-                <label>SSL 加密</label>
+                <label>加密方式</label>
                 <select class="form-control" id="emailUseSsl">
-                    <option value="true" ${e.use_ssl!==false?'selected':''}>是 (推荐)</option>
-                    <option value="false" ${e.use_ssl===false?'selected':''}>否</option>
+                    <option value="true" ${e.use_ssl!==false?'selected':''}>SSL (端口 465，推荐)</option>
+                    <option value="false" ${e.use_ssl===false?'selected':''}>STARTTLS (端口 587)</option>
                 </select>
             </div>
             <div class="form-group">
                 <label>发件邮箱</label>
-                <input type="text" class="form-control" id="emailSender" value="${escapeHtml(e.sender || '')}">
+                <input type="text" class="form-control" id="emailSender" value="${escapeHtml(e.sender || '')}" onchange="autoDetectProvider()" placeholder="如：example@qq.com">
             </div>
             <div class="form-group">
                 <label>授权码 / 密码 ${e.password_set ? '<span class="badge badge-success">已设置</span>' : '<span class="badge badge-warning">未设置</span>'}</label>
-                <input type="password" class="form-control" id="emailPassword" placeholder="${e.password_set ? '已设置，如需修改请输入新密码' : '请输入授权码'}" value="${e.password_set ? '******' : ''}">
+                <div class="password-wrap">
+                    <input type="password" class="form-control" id="emailPassword" placeholder="${e.password_set ? '已设置，如需修改请输入新密码' : '请输入授权码'}" value="${escapeHtml(e.password || '')}">
+                    <button type="button" class="password-toggle" onclick="togglePasswordVisibility()" title="显示/隐藏密码">👁️</button>
+                </div>
+                <div id="emailProviderHint" style="margin-top:6px;font-size:12px;color:var(--danger)"></div>
             </div>
             <div class="form-group">
-                <label>收件邮箱 <span class="hint">(多个用逗号分隔)</span></label>
-                <input type="text" class="form-control" id="emailReceiver" value="${escapeHtml(e.receiver || '')}">
+                <label>收件邮箱 <span class="hint">支持添加多个收件人</span></label>
+                <div class="email-tags-input" id="emailReceiverTags" onclick="document.getElementById('emailReceiverInput').focus()">
+                    <span class="email-tags-list" id="emailTagsList"></span>
+                    <input type="text" id="emailReceiverInput" class="email-tag-input" placeholder="输入邮箱后回车或逗号添加" onkeydown="handleEmailInput(event)" onblur="commitEmailInput()">
+                </div>
+                <input type="hidden" id="emailReceiver" value="">
             </div>
             <div style="display:flex;gap:10px;margin-top:20px">
                 <button class="btn btn-primary" onclick="saveEmail()">保存配置</button>
+                <button class="btn btn-outline" onclick="diagnoseSmtp()">🔍 连接诊断</button>
                 <button class="btn btn-outline" onclick="testEmail()">发送测试邮件</button>
             </div>
+            <div id="diagnoseResult" style="display:none;margin-top:16px;padding:14px;background:#f8f9fa;border-radius:6px;font-family:Consolas,monospace;font-size:12px;white-space:pre-wrap;max-height:300px;overflow-y:auto;line-height:1.6"></div>
         `;
+        // 初始化收件人标签
+        initEmailTags(e.receiver || '');
+        // 自动检测提供商并显示提示
+        autoDetectProvider();
     } catch(e) {
         document.getElementById('emailForm').innerHTML = '<div class="empty-state">加载失败</div>';
     }
 }
 
+// ===== 邮箱标签管理 =====
+let emailRecipients = [];
+
+function renderEmailTags() {
+    const container = document.getElementById('emailTagsList');
+    container.innerHTML = emailRecipients.map((email, i) =>
+        `<span class="email-tag">${escapeHtml(email)}<span class="remove" onclick="removeEmailTag(${i})">&times;</span></span>`
+    ).join('');
+    document.getElementById('emailReceiver').value = emailRecipients.join(',');
+}
+
+function addEmailTag(email) {
+    email = email.trim();
+    if (!email) return;
+    // 基本邮箱格式校验
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        toast('邮箱格式不正确: ' + email, 'error');
+        return;
+    }
+    // 去重
+    if (emailRecipients.includes(email)) {
+        toast('该邮箱已存在', 'info');
+        return;
+    }
+    emailRecipients.push(email);
+    renderEmailTags();
+}
+
+function removeEmailTag(index) {
+    emailRecipients.splice(index, 1);
+    renderEmailTags();
+}
+
+function handleEmailInput(event) {
+    const input = event.target;
+    const value = input.value.trim();
+    // 回车或逗号添加
+    if (event.key === 'Enter' || event.key === ',') {
+        event.preventDefault();
+        if (value) {
+            // 支持粘贴多个逗号分隔的邮箱
+            const emails = value.split(',').map(e => e.trim()).filter(Boolean);
+            emails.forEach(e => addEmailTag(e));
+            input.value = '';
+        }
+    }
+    // 退格删除最后一个标签
+    else if (event.key === 'Backspace' && !value && emailRecipients.length > 0) {
+        emailRecipients.pop();
+        renderEmailTags();
+    }
+}
+
+function commitEmailInput() {
+    const input = document.getElementById('emailReceiverInput');
+    const value = input.value.trim();
+    if (value) {
+        const emails = value.split(',').map(e => e.trim()).filter(Boolean);
+        emails.forEach(e => addEmailTag(e));
+        input.value = '';
+    }
+}
+
+function initEmailTags(receiverStr) {
+    emailRecipients = (receiverStr || '').split(',').map(e => e.trim()).filter(Boolean);
+    renderEmailTags();
+}
+
+function togglePasswordVisibility() {
+    const input = document.getElementById('emailPassword');
+    const btn = input.parentElement.querySelector('.password-toggle');
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+    } else {
+        input.type = 'password';
+        btn.textContent = '👁️';
+    }
+}
+
+// ===== 邮箱提供商预设 =====
+let providerPresetsCache = {};
+
+const providerNotes = {
+    'qq.com': '⚠️ QQ邮箱必须使用「授权码」而非 QQ 登录密码！<br>获取方法：登录 mail.qq.com → 设置 → 账户 → POP3/SMTP 服务 → 开启 → 生成授权码',
+    '163.com': '⚠️ 163邮箱需使用「客户端授权密码」而非登录密码！<br>获取方法：登录 mail.163.com → 设置 → POP3/SMTP/IMAP → 开启 → 设置授权码',
+    '126.com': '⚠️ 126邮箱需使用「客户端授权密码」而非登录密码！',
+    'yeah.net': '⚠️ Yeah邮箱需使用「客户端授权密码」而非登录密码！',
+    'gmail.com': '⚠️ Gmail 需开启两步验证，然后生成「应用专用密码」使用。',
+};
+
+const providerConfigs = {
+    'qq.com':     { smtp_server: 'smtp.qq.com',       smtp_port: 465, use_ssl: true },
+    '163.com':    { smtp_server: 'smtp.163.com',      smtp_port: 465, use_ssl: true },
+    '126.com':    { smtp_server: 'smtp.126.com',      smtp_port: 465, use_ssl: true },
+    'yeah.net':   { smtp_server: 'smtp.yeah.net',     smtp_port: 465, use_ssl: true },
+    'sina.com':   { smtp_server: 'smtp.sina.com',     smtp_port: 465, use_ssl: true },
+    'gmail.com':  { smtp_server: 'smtp.gmail.com',    smtp_port: 587, use_ssl: false },
+    'outlook.com':{ smtp_server: 'smtp-mail.outlook.com', smtp_port: 587, use_ssl: false },
+    'aliyun.com': { smtp_server: 'smtp.aliyun.com',   smtp_port: 465, use_ssl: true },
+};
+
+function applyProviderPreset(domain) {
+    if (!domain) return;
+    const cfg = providerConfigs[domain];
+    if (!cfg) return;
+    document.getElementById('emailSmtpServer').value = cfg.smtp_server;
+    document.getElementById('emailSmtpPort').value = cfg.smtp_port;
+    document.getElementById('emailUseSsl').value = cfg.use_ssl ? 'true' : 'false';
+    // 显示提示
+    const hintEl = document.getElementById('emailProviderHint');
+    if (hintEl && providerNotes[domain]) {
+        hintEl.innerHTML = providerNotes[domain];
+        hintEl.style.display = 'block';
+    } else if (hintEl) {
+        hintEl.style.display = 'none';
+    }
+    toast('已应用 ' + domain + ' 默认配置');
+}
+
+function autoDetectProvider() {
+    const sender = document.getElementById('emailSender').value.trim();
+    const domain = sender.split('@')[1] || '';
+    const hintEl = document.getElementById('emailProviderHint');
+
+    if (!domain) {
+        if (hintEl) hintEl.style.display = 'none';
+        return;
+    }
+
+    // 如果有匹配的预设，显示提示
+    if (providerConfigs[domain] || providerNotes[domain]) {
+        const cfg = providerConfigs[domain];
+        if (cfg) {
+            document.getElementById('emailSmtpServer').value = cfg.smtp_server;
+            document.getElementById('emailSmtpPort').value = cfg.smtp_port;
+            document.getElementById('emailUseSsl').value = cfg.use_ssl ? 'true' : 'false';
+        }
+        if (hintEl && providerNotes[domain]) {
+            hintEl.innerHTML = providerNotes[domain];
+            hintEl.style.display = 'block';
+        }
+    } else {
+        if (hintEl) hintEl.style.display = 'none';
+    }
+}
+
+async function diagnoseSmtp() {
+    const resultDiv = document.getElementById('diagnoseResult');
+    resultDiv.style.display = 'block';
+    resultDiv.textContent = '🔍 正在诊断 SMTP 连接，请稍候...';
+    resultDiv.style.color = 'var(--text-secondary)';
+
+    try {
+        const res = await apiPost('/diagnose-smtp', {});
+        if (res.success) {
+            const d = res.data;
+            resultDiv.innerHTML = `<strong>SMTP 连接诊断报告</strong>\n${'─'.repeat(40)}\n服务器: ${d.config.server}:${d.config.port}\n加密方式: ${d.config.use_ssl ? 'SSL' : 'STARTTLS'}\n发件人: ${d.config.sender}\n${'─'.repeat(40)}\n${d.detail}`;
+            resultDiv.style.color = d.connected ? '#34a853' : '#ea4335';
+        } else {
+            resultDiv.textContent = '诊断失败: ' + (res.error || '未知错误');
+            resultDiv.style.color = '#ea4335';
+        }
+    } catch(e) {
+        resultDiv.textContent = '诊断请求失败: ' + e.message;
+        resultDiv.style.color = '#ea4335';
+    }
+}
+
 async function saveEmail() {
+    // 提交输入框中未确认的邮箱
+    commitEmailInput();
     const config = {
         smtp_server: document.getElementById('emailSmtpServer').value.trim(),
         smtp_port: parseInt(document.getElementById('emailSmtpPort').value) || 465,
         use_ssl: document.getElementById('emailUseSsl').value === 'true',
         sender: document.getElementById('emailSender').value.trim(),
         password: document.getElementById('emailPassword').value,
-        receiver: document.getElementById('emailReceiver').value.trim(),
+        receiver: emailRecipients.join(','),
     };
     try {
         const res = await apiPut('/email', config);
@@ -1167,6 +2439,13 @@ async function loadScheduleConfig() {
                     <option value="false" ${!s.fetch_on_start?'selected':''}>否</option>
                 </select>
             </div>
+            <div class="form-group">
+                <label>启用自动发送 <span class="hint">(关闭后仅抓取不发邮件，可在行业动态页面手动发送)</span></label>
+                <select class="form-control" id="schedAutoSend">
+                    <option value="true" ${s.auto_send!==false?'selected':''}>启用 (抓取后自动发送邮件)</option>
+                    <option value="false" ${s.auto_send===false?'selected':''}>关闭 (仅抓取入库，手动发送)</option>
+                </select>
+            </div>
             <div style="margin-top:20px">
                 <button class="btn btn-primary" onclick="saveSchedule()">保存配置</button>
             </div>
@@ -1187,6 +2466,7 @@ async function saveSchedule() {
         times,
         timezone: document.getElementById('schedTimezone').value.trim() || 'Asia/Shanghai',
         fetch_on_start: document.getElementById('schedFetchOnStart').value === 'true',
+        auto_send: document.getElementById('schedAutoSend').value === 'true',
     };
     try {
         const res = await apiPut('/schedule', config);
@@ -1197,16 +2477,22 @@ async function saveSchedule() {
 
 // ===== 手动操作 =====
 async function fetchNow() {
-    if (!confirm('确定立即执行一次抓取任务吗？如有新条目将自动发送邮件。')) return;
+    if (!confirm('确定立即执行一次抓取任务吗？')) return;
     toast('正在抓取，请稍候...', 'info');
     try {
         const res = await apiPost('/fetch-now', {});
         if (res.success) {
             const d = res.data;
             let msg = `抓取完成：新增 ${d.new_items} 条`;
-            if (d.sent > 0) msg += `，已发送 ${d.sent} 条邮件`;
-            else if (d.send_status === 'failed') msg += '，邮件发送失败';
-            else msg += '，无新邮件';
+            if (d.send_status === 'auto_send_disabled') {
+                msg += '，自动发送已关闭（请在行业动态中手动发送）';
+            } else if (d.sent > 0) {
+                msg += `，已发送 ${d.sent} 条邮件`;
+            } else if (d.send_status === 'failed') {
+                msg += '，邮件发送失败';
+            } else {
+                msg += '，无新邮件';
+            }
             toast(msg, d.send_status === 'failed' ? 'error' : 'success');
             loadDashboard();
         } else {
@@ -1219,8 +2505,24 @@ async function testEmail() {
     toast('正在发送测试邮件...', 'info');
     try {
         const res = await apiPost('/test-email', {});
-        if (res.success) toast(res.message);
-        else toast(res.error || '发送失败', 'error');
+        if (res.success) {
+            toast(res.message);
+        } else {
+            // 显示详细错误
+            const errMsg = res.error || '发送失败';
+            const detail = res.detail || '';
+            if (detail) {
+                alert('邮件发送失败\n\n' + errMsg + '\n\n诊断信息:\n' + detail);
+            }
+            toast(errMsg, 'error');
+            // 同时在诊断区域显示
+            const resultDiv = document.getElementById('diagnoseResult');
+            if (resultDiv && detail) {
+                resultDiv.style.display = 'block';
+                resultDiv.textContent = '诊断信息:\n' + detail;
+                resultDiv.style.color = '#ea4335';
+            }
+        }
     } catch(e) { toast('发送失败: ' + e.message, 'error'); }
 }
 

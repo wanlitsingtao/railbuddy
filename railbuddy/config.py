@@ -129,6 +129,11 @@ class Config:
     def max_items_per_source(self) -> int:
         return self.dedup_config.get("max_items_per_source", 100)
 
+    @property
+    def max_age_days(self) -> int:
+        """首次抓取时只取最近 N 天的数据，0 表示不限制"""
+        return self.dedup_config.get("max_age_days", 0)
+
     def reload(self):
         """重新加载配置（支持运行时热更新）"""
         self.load()

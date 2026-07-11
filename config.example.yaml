@@ -351,17 +351,19 @@ email:
   use_ssl: true
   sender: your_email@qq.com
   password: your_authorization_code
-  receiver: receiver_email@qq.com
+  receiver: receiver1@qq.com, receiver2@163.com  # 多个收件人用逗号分隔
 schedule:
   times:
   - 08:00
   - '12:00'
   timezone: Asia/Shanghai
   fetch_on_start: true
+  auto_send: true  # 启用自动发送：抓取后自动发邮件；设为 false 则只抓取不发邮件
 dedup:
   db_path: data/railbuddy.db
   retention_days: 90
   max_items_per_source: 100
+  max_age_days: 30  # 首次抓取只取最近 N 天的数据，0 表示不限制
 logging:
   level: INFO
   file: logs/railbuddy.log

@@ -233,18 +233,3 @@ class WechatFetcher(BaseFetcher):
             title=title, url=url, publish_date=publish_date,
             description=desc, category=self._guess_category(title)
         )
-
-    @staticmethod
-    def _guess_category(title: str) -> str:
-        """根据标题猜测类别"""
-        title = title or ""
-        if "中标" in title or "成交" in title:
-            return "中标"
-        # 开通运营：仅匹配"开通""通车""试运营"等明确事件词
-        if any(kw in title for kw in ["开通", "通车", "试运营", "投入运营", "正式运营", "开通试运营", "初期运营"]):
-            return "开通运营"
-        if "招标" in title or "采购" in title:
-            return "招标"
-        if "计划" in title:
-            return "招标计划"
-        return ""

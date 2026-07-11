@@ -22,7 +22,7 @@ from flask import Flask, request, jsonify, send_from_directory, render_template
 from ..config import Config, ConfigError
 from ..database import Database
 from ..fetchers.registry import FetcherManager
-from ..mailer import MailSender
+from ..mailer import MailSender, get_provider_hint, EMAIL_PROVIDER_PRESETS
 from ..models import BidItem
 
 logger = logging.getLogger(__name__)
@@ -83,19 +83,26 @@ class WebServer:
                 total_sources = len(config.raw_sources) + len(config.raw_wechat_sources)
                 schedule_times = config.schedule_config.get("times", [])
 
+                # 仪表盘：数据源状态分页（只取首页 20 条 + 总数）
+                source_states_result = db.get_source_states_paginated(page=1, per_page=20)
+                recent_send_logs = db.get_send_logs_paginated(page=1, per_page=5)
+
                 return jsonify({
                     "success": True,
                     "data": {
                         "stats": stats,
-                        "source_states": source_states,
+                        "source_states": source_states_result["items"],
+                        "source_states_total": source_states_result["total"],
                         "last_send": last_send,
-                        "send_logs": send_logs,
+                        "send_logs": recent_send_logs["items"],
                         "config_summary": {
                             "total_sources": total_sources,
                             "enabled_sources": enabled_sources + enabled_wechat,
                             "disabled_sources": total_sources - enabled_sources - enabled_wechat,
                             "schedule_times": schedule_times,
                             "timezone": config.schedule_config.get("timezone", "Asia/Shanghai"),
+                            "auto_send": config.schedule_config.get("auto_send", True),
+                            "fetch_on_start": config.schedule_config.get("fetch_on_start", True),
                             "email_configured": bool(config.email_config.get("sender") and config.email_config.get("password")),
                             "receiver": config.email_config.get("receiver", ""),
                         }
@@ -110,9 +117,22 @@ class WebServer:
         def api_list_sources():
             try:
                 config = self._load_config()
+                sources = config.raw_sources
+                page = int(request.args.get("page", 1))
+                per_page = int(request.args.get("per_page", 20))
+                total = len(sources)
+                start = (page - 1) * per_page
+                end = start + per_page
+                page_sources = sources[start:end]
                 return jsonify({
                     "success": True,
-                    "data": config.raw_sources
+                    "data": {
+                        "items": page_sources,
+                        "total": total,
+                        "page": page,
+                        "per_page": per_page,
+                        "total_pages": (total + per_page - 1) // per_page if per_page > 0 else 0
+                    }
                 })
             except Exception as e:
                 return jsonify({"success": False, "error": str(e)}), 500
@@ -121,8 +141,16 @@ class WebServer:
         def api_add_source():
             try:
                 source = request.json
-                if not source or not source.get("name") or not source.get("url"):
-                    return jsonify({"success": False, "error": "name 和 url 不能为空"}), 400
+                if not source or not source.get("name"):
+                    return jsonify({"success": False, "error": "name 不能为空"}), 400
+
+                src_type = source.get("type", "website")
+                if src_type == "api":
+                    if not source.get("api_url"):
+                        return jsonify({"success": False, "error": "API 类型需要填写 api_url"}), 400
+                else:
+                    if not source.get("url"):
+                        return jsonify({"success": False, "error": "网站类型需要填写 url"}), 400
 
                 config = self._load_config()
                 sources = config.raw_sources
@@ -157,8 +185,16 @@ class WebServer:
                     return jsonify({"success": False, "error": "索引超出范围"}), 400
 
                 source = request.json
-                if not source or not source.get("name") or not source.get("url"):
-                    return jsonify({"success": False, "error": "name 和 url 不能为空"}), 400
+                if not source or not source.get("name"):
+                    return jsonify({"success": False, "error": "name 不能为空"}), 400
+
+                src_type = source.get("type", "website")
+                if src_type == "api":
+                    if not source.get("api_url"):
+                        return jsonify({"success": False, "error": "API 类型需要填写 api_url"}), 400
+                else:
+                    if not source.get("url"):
+                        return jsonify({"success": False, "error": "网站类型需要填写 url"}), 400
 
                 # 检查重名（排除自身）
                 for i, s in enumerate(sources):
@@ -195,9 +231,22 @@ class WebServer:
         def api_list_wechat():
             try:
                 config = self._load_config()
+                sources = config.raw_wechat_sources
+                page = int(request.args.get("page", 1))
+                per_page = int(request.args.get("per_page", 20))
+                total = len(sources)
+                start = (page - 1) * per_page
+                end = start + per_page
+                page_sources = sources[start:end]
                 return jsonify({
                     "success": True,
-                    "data": config.raw_wechat_sources
+                    "data": {
+                        "items": page_sources,
+                        "total": total,
+                        "page": page,
+                        "per_page": per_page,
+                        "total_pages": (total + per_page - 1) // per_page if per_page > 0 else 0
+                    }
                 })
             except Exception as e:
                 return jsonify({"success": False, "error": str(e)}), 500
@@ -277,9 +326,9 @@ class WebServer:
             try:
                 config = self._load_config()
                 email_cfg = dict(config.email_config)
-                # 脱敏：不返回密码
+                # 脱敏：不返回密码，但保留 password_set 标志
                 if email_cfg.get("password"):
-                    email_cfg["password"] = "******"
+                    email_cfg["password"] = ""
                     email_cfg["password_set"] = True
                 else:
                     email_cfg["password_set"] = False
@@ -350,6 +399,18 @@ class WebServer:
                 return jsonify({"success": False, "error": str(e)}), 500
 
         # ---- 抓取记录 ----
+        @app.route("/api/categories")
+        def api_categories():
+            """返回数据库中所有存在的类别列表"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+                categories = db.get_all_categories()
+                return jsonify({"success": True, "data": categories})
+            except Exception as e:
+                logger.error(f"Categories API error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
         @app.route("/api/items")
         def api_items():
             try:
@@ -360,11 +421,15 @@ class WebServer:
                 per_page = int(request.args.get("per_page", 20))
                 source = request.args.get("source") or None
                 status = request.args.get("status") or None
+                category = request.args.get("category") or None
                 keyword = request.args.get("keyword") or None
+                date_from = request.args.get("date_from") or None
+                date_to = request.args.get("date_to") or None
 
                 result = db.get_items_paginated(
                     page=page, per_page=per_page,
-                    source=source, status=status, keyword=keyword
+                    source=source, status=status, category=category,
+                    keyword=keyword, date_from=date_from, date_to=date_to
                 )
                 sources_list = db.get_all_sources()
 
@@ -376,15 +441,139 @@ class WebServer:
             except Exception as e:
                 return jsonify({"success": False, "error": str(e)}), 500
 
+        # ---- 里程统计 ----
+        @app.route("/api/transit-stats")
+        def api_transit_stats():
+            """里程数据统计概要"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+                stats = db.get_mileage_stats()
+                return jsonify({"success": True, "data": stats})
+            except Exception as e:
+                logger.error(f"Transit stats API error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/transit-trend")
+        def api_transit_trend():
+            """全国里程月度变化趋势"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+                trend = db.get_national_trend()
+                return jsonify({"success": True, "data": trend})
+            except Exception as e:
+                logger.error(f"Transit trend API error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/transit-cities")
+        def api_transit_cities():
+            """城市维度里程汇总（最新月）+ 城市维度趋势"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+                city = request.args.get("city") or None
+                # 城市排名（最新月）
+                city_summary = db.get_city_summary()
+                # 城市趋势
+                city_trend = db.get_city_trend(city)
+                # 可选城市列表
+                cities = db.get_mileage_cities()
+                return jsonify({
+                    "success": True,
+                    "data": city_summary,
+                    "trend": city_trend,
+                    "cities": cities,
+                })
+            except Exception as e:
+                logger.error(f"Transit cities API error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/transit-mileage")
+        def api_transit_mileage():
+            """查询单月里程明细"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+                month = request.args.get("month")
+                if not month:
+                    month = db.get_latest_mileage_month()
+                if not month:
+                    return jsonify({"success": True, "data": []})
+                mileage = db.get_mileage_by_month(month)
+                months = db.get_mileage_months()
+                return jsonify({
+                    "success": True,
+                    "data": mileage,
+                    "month": month,
+                    "available_months": months,
+                })
+            except Exception as e:
+                logger.error(f"Transit mileage API error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/transit-annual-trend")
+        def api_transit_annual_trend():
+            """全国年度里程趋势（1969-至今），含制式分类"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+                trend = db.get_national_annual_trend()
+                return jsonify({"success": True, "data": trend})
+            except Exception as e:
+                logger.error(f"Transit annual trend API error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/transit-system-types")
+        def api_transit_system_types():
+            """按制式分类的里程统计（最新月）"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+                breakdown = db.get_system_type_breakdown()
+                return jsonify({"success": True, "data": breakdown})
+            except Exception as e:
+                logger.error(f"Transit system types API error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/transit-city-trend")
+        def api_transit_city_trend():
+            """城市维度年度里程趋势"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+                city = request.args.get("city", None)
+                trend = db.get_city_annual_trend()
+                if city:
+                    trend = [t for t in trend if t["city"] == city]
+                return jsonify({"success": True, "data": trend})
+            except Exception as e:
+                logger.error(f"Transit city trend API error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/seed-history", methods=["POST"])
+        def api_seed_history():
+            """加载历史里程数据"""
+            try:
+                from ..data.transit_history import seed_history
+                config = self._load_config()
+                db = self._get_db(config)
+                result = seed_history(db)
+                return jsonify({"success": True, "data": result})
+            except Exception as e:
+                logger.error(f"Seed history API error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
         # ---- 发送日志 ----
         @app.route("/api/send-logs")
         def api_send_logs():
             try:
                 config = self._load_config()
                 db = self._get_db(config)
-                limit = int(request.args.get("limit", 20))
-                logs = db.get_send_logs(limit)
-                return jsonify({"success": True, "data": logs})
+                page = int(request.args.get("page", 1))
+                per_page = int(request.args.get("per_page", 20))
+                result = db.get_send_logs_paginated(page=page, per_page=per_page)
+                return jsonify({"success": True, "data": result})
             except Exception as e:
                 return jsonify({"success": False, "error": str(e)}), 500
 
@@ -394,8 +583,10 @@ class WebServer:
             try:
                 config = self._load_config()
                 db = self._get_db(config)
-                states = db.get_all_source_states()
-                return jsonify({"success": True, "data": states})
+                page = int(request.args.get("page", 1))
+                per_page = int(request.args.get("per_page", 20))
+                result = db.get_source_states_paginated(page=page, per_page=per_page)
+                return jsonify({"success": True, "data": result})
             except Exception as e:
                 return jsonify({"success": False, "error": str(e)}), 500
 
@@ -412,10 +603,12 @@ class WebServer:
                 )
                 new_items = fetcher_mgr.fetch_all(db)
 
-                # 如果有新条目，立即发送邮件
+                # 检查是否启用自动发送
+                auto_send = config.schedule_config.get("auto_send", True)
+
                 sent_count = 0
                 send_status = "skipped"
-                if new_items:
+                if new_items and auto_send:
                     mailer = MailSender(config.email_config)
                     success = mailer.send(new_items)
                     if success:
@@ -430,6 +623,8 @@ class WebServer:
                     else:
                         send_status = "failed"
                         db.log_send(len(new_items), config.email_config.get("receiver", ""), "failed", "SMTP 发送失败")
+                elif not auto_send:
+                    send_status = "auto_send_disabled"
                 else:
                     # 检查是否有遗留未发送的
                     pending = db.get_unsent_items()
@@ -455,6 +650,36 @@ class WebServer:
                 logger.error(f"Fetch now error: {e}", exc_info=True)
                 return jsonify({"success": False, "error": str(e)}), 500
 
+        # ---- 邮箱提供商预设 ----
+        @app.route("/api/email-providers", methods=["GET"])
+        def api_email_providers():
+            """返回常见邮箱提供商的 SMTP 预设配置"""
+            return jsonify({"success": True, "data": EMAIL_PROVIDER_PRESETS})
+
+        # ---- 手动操作：SMTP 诊断 ----
+        @app.route("/api/diagnose-smtp", methods=["POST"])
+        def api_diagnose_smtp():
+            """诊断 SMTP 连接问题，返回详细的步骤级诊断结果"""
+            try:
+                config = self._load_config()
+                mailer = MailSender(config.email_config)
+                ok, detail = mailer.diagnose()
+                return jsonify({
+                    "success": True,
+                    "data": {
+                        "connected": ok,
+                        "detail": detail,
+                        "config": {
+                            "server": config.email_config.get("smtp_server", ""),
+                            "port": config.email_config.get("smtp_port", 465),
+                            "use_ssl": config.email_config.get("use_ssl", True),
+                            "sender": config.email_config.get("sender", ""),
+                        }
+                    }
+                })
+            except Exception as e:
+                return jsonify({"success": False, "error": str(e)}), 500
+
         # ---- 手动操作：测试邮件 ----
         @app.route("/api/test-email", methods=["POST"])
         def api_test_email():
@@ -473,8 +698,66 @@ class WebServer:
                 if success:
                     return jsonify({"success": True, "message": "测试邮件已发送，请检查收件箱"})
                 else:
+                    # 发送失败时附带诊断信息
+                    ok, detail = mailer.diagnose()
+                    provider_hint = get_provider_hint(config.email_config.get("sender", ""))
+                    hint_text = ""
+                    if provider_hint:
+                        hint_text = f"\n{provider_hint['label']}提示：{provider_hint['note']}"
+                    return jsonify({
+                        "success": False,
+                        "error": "邮件发送失败",
+                        "detail": detail + hint_text
+                    }), 500
+            except Exception as e:
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        # ---- 手动操作：发送选中条目 ----
+        @app.route("/api/send-items", methods=["POST"])
+        def api_send_items():
+            try:
+                data = request.json or {}
+                item_ids = data.get("item_ids", [])
+                if not item_ids:
+                    return jsonify({"success": False, "error": "未选择任何条目"}), 400
+
+                config = self._load_config()
+                db = self._get_db(config)
+
+                # 按 ID 查询条目
+                items = db.get_items_by_ids(item_ids)
+                if not items:
+                    return jsonify({"success": False, "error": "未找到选中的条目"}), 404
+
+                # 发送邮件
+                mailer = MailSender(config.email_config)
+                success = mailer.send(items)
+
+                if success:
+                    db.mark_items_sent(item_ids)
+                    sources_involved = set(item.source for item in items)
+                    for sn in sources_involved:
+                        db.update_send_time(sn)
+                    db.log_send(
+                        len(items),
+                        config.email_config.get("receiver", ""),
+                        "success"
+                    )
+                    return jsonify({
+                        "success": True,
+                        "message": f"已发送 {len(items)} 条记录到邮箱",
+                        "data": {"sent": len(items)}
+                    })
+                else:
+                    db.log_send(
+                        len(items),
+                        config.email_config.get("receiver", ""),
+                        "failed",
+                        "SMTP 发送失败"
+                    )
                     return jsonify({"success": False, "error": "邮件发送失败，请检查 SMTP 配置"}), 500
             except Exception as e:
+                logger.error(f"Send items error: {e}", exc_info=True)
                 return jsonify({"success": False, "error": str(e)}), 500
 
     def run(self, debug: bool = False):

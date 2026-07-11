@@ -44,6 +44,11 @@ def main():
         help="发送一封测试邮件（验证邮箱配置）"
     )
     parser.add_argument(
+        "--diagnose-smtp",
+        action="store_true",
+        help="诊断 SMTP 连接问题（DNS、TCP、SSL、登录逐步检查）"
+    )
+    parser.add_argument(
         "--web",
         action="store_true",
         help="启动 Web 管理面板（可视化配置数据源、邮箱、调度等）"
@@ -125,6 +130,24 @@ def main():
             print("测试邮件发送成功！请检查收件箱。")
         else:
             print("测试邮件发送失败！请检查邮箱配置。")
+            # 自动运行诊断
+            print("\n自动运行 SMTP 诊断...")
+            ok, detail = app.mailer.diagnose()
+            print(detail)
+        return
+
+    # SMTP 诊断模式
+    if args.diagnose_smtp:
+        setup_logging(level="INFO")
+        app = RailBuddyApp(args.config)
+        print("正在诊断 SMTP 连接...\n")
+        ok, detail = app.mailer.diagnose()
+        print(detail)
+        print()
+        if ok:
+            print("✅ SMTP 连接和认证正常！")
+        else:
+            print("❌ SMTP 连接存在问题，请根据上方诊断信息修复。")
         return
 
     # 单次执行模式

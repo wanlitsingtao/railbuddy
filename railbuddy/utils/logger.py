@@ -6,6 +6,28 @@ import sys
 from logging.handlers import TimedRotatingFileHandler
 
 
+class SafeTimedRotatingFileHandler(TimedRotatingFileHandler):
+    """容错的按天轮转文件日志处理器
+
+    当日志文件被其他进程锁定时（如 Web 服务和抓取服务同时运行），
+    跳过轮转而非抛出异常，避免日志丢失。
+    """
+
+    def doRollover(self):
+        try:
+            super().doRollover()
+        except PermissionError:
+            # 文件被其他进程锁定，跳过本次轮转
+            pass
+
+    def emit(self, record):
+        try:
+            super().emit(record)
+        except (PermissionError, OSError):
+            # 轮转失败时不影响日志输出，降级为跳过
+            pass
+
+
 def setup_logging(level: str = "INFO", log_file: str = "logs/railbuddy.log",
                   backup_count: int = 30):
     """配置全局日志系统
@@ -41,8 +63,8 @@ def setup_logging(level: str = "INFO", log_file: str = "logs/railbuddy.log",
     console_handler.setFormatter(fmt)
     root_logger.addHandler(console_handler)
 
-    # 文件输出（按天轮转）
-    file_handler = TimedRotatingFileHandler(
+    # 文件输出（按天轮转，容错处理）
+    file_handler = SafeTimedRotatingFileHandler(
         log_file, when="midnight", interval=1,
         backupCount=backup_count, encoding="utf-8"
     )

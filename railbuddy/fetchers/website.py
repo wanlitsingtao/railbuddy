@@ -132,21 +132,3 @@ class WebsiteFetcher(BaseFetcher):
                 return html_to_plain_text(str(elem))
 
         return ""
-
-    @staticmethod
-    def _guess_category(title: str) -> str:
-        """根据标题猜测招标类别"""
-        title = title or ""
-        if "中标" in title or "成交" in title:
-            return "中标"
-        if "招标计划" in title or "计划" in title:
-            return "招标计划"
-        # 开通运营：仅匹配"开通""通车""试运营"等明确事件词
-        # 不匹配单独的"运营"（避免公司名"xx运营集团"误判）
-        if any(kw in title for kw in ["开通", "通车", "试运营", "投入运营", "正式运营", "开通试运营", "初期运营"]):
-            return "开通运营"
-        if "招标" in title or "采购" in title:
-            return "招标"
-        if "变更" in title or "澄清" in title:
-            return "变更"
-        return ""

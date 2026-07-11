@@ -20,6 +20,45 @@ sources:
   detail_content_selector: '.content, .article-content, #content'
   timeout: 15
   request_interval: 2
+- api_url: https://new.szggzy.com/cms/api/v1/trade/content/page
+  category_field: noticeTypeName
+  category_mapping:
+    中标候选人公示: 中标
+    中标结果公示: 中标
+    变更公告: 变更
+    定标结果公示: 中标
+    开标情况: 招标
+    开标情况公示: 招标
+    截标信息: 招标
+    招标公告: 招标
+    更正公告: 变更
+    澄清公告: 变更
+    资审及业绩公示: 招标
+  channel_id: 2851
+  data_path: data.content
+  date_field: releaseTime
+  detail_url_template: https://new.szggzy.com/jygg/details.html?contentId={content_id}
+  enabled: true
+  id_field: id
+  keywords:
+  - 地铁
+  - 轨道交通
+  - 轨道
+  - 地铁集团
+  - 轻轨
+  - 有轨电车
+  - 交通枢纽
+  - 城轨
+  max_pages: 10
+  method: POST
+  name: 深圳公共资源交易中心
+  page_size: 30
+  request_interval: 2
+  since_param: releaseTimeBegin
+  timeout: 15
+  title_field: title
+  type: api
+  verify_ssl: false
 - name: 广州地铁招标网
   type: website
   enabled: true
@@ -217,7 +256,7 @@ sources:
   verify_ssl: false
 - name: 郑州地铁采购公告
   type: website
-  enabled: true
+  enabled: false
   url: https://www.zzmetro.cn/nav/list/33/35
   list_selector: ul li
   title_selector: a
@@ -318,6 +357,810 @@ sources:
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
+- name: 北京公共资源交易中心
+  type: website
+  enabled: false
+  url: https://ggzyfw.beijing.gov.cn/jyxxzbgg/index.html
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: span
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+  verify_ssl: false
+- name: 青岛公共资源交易中心
+  type: website
+  enabled: true
+  url: https://ggzy.qingdao.gov.cn/Tradeinfo-GGGSList/0-0-0
+  list_selector: .info_con table tr
+  title_selector: td a
+  link_selector: td a
+  date_selector: td:last-child
+  link_prefix: https://ggzy.qingdao.gov.cn
+  verify_ssl: false
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  - 工程
+  - 施工
+  - 监理
+  - 设计
+  - 建设
+  - 改造
+  - 总承包
+  fetch_detail: false
+  timeout: 15
+  request_interval: 2
+- name: 大连公共资源交易中心
+  type: website
+  enabled: false
+  url: https://ggzyjy.dl.gov.cn/jyxx/002001/002001001/002001001002/transaction_information.html
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 沈阳公共资源交易中心
+  type: website
+  enabled: false
+  url: https://ggzy.shenyang.gov.cn/jyxxgcjs/index.jhtml
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: span
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- date_selector: td:last-child
+  detail_content_selector: .content, .article-content
+  enabled: true
+  fetch_detail: false
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+- name: 长春公共资源交易中心
+  type: api
+  enabled: true
+  api_url: https://www.ccggzy.com.cn/ccggzy/getxxgkAction.action?cmd=getCityZfcgInfoNew
+  method: POST
+  content_type: form
+  body_template:
+    categorynum: "002002001"
+    xiaqucode: "220101"
+    jyfl: "全部"
+    pageSize: 15
+    siteguid: "7eb5f7f1-9041-43ad-8e13-8fcb82ea831a"
+  page_param: pageIndex
+  page_base: 1
+  page_size: 15
+  max_pages: 3
+  data_path: Table
+  json_string_path: custom
+  title_field: title
+  date_field: infodate
+  url_field: href
+  link_prefix: https://www.ccggzy.com.cn
+  since_param: ""
+  verify_ssl: false
+  timeout: 15
+  request_interval: 2
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  - 工程
+  - 施工
+  - 监理
+  - 设计
+  - 建设
+  - 改造
+  - 总承包
+- name: 哈尔滨公共资源交易中心
+  type: website
+  enabled: true
+  url: https://hrbggzy.harbin.gov.cn/zbgg/secondpage.html
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: span
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 石家庄公共资源交易中心
+  type: website
+  enabled: false
+  url: https://www.sjzsggzyjyzx.org.cn/jyxxgczb/index.jhtml
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: span
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 西安公共资源交易中心
+  type: website
+  enabled: true
+  url: https://sxggzyjy.xa.gov.cn/jydt/001001/001001001/001001001007/
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: span
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+  verify_ssl: false
+- name: 合肥公共资源交易中心
+  type: website
+  enabled: true
+  url: https://ggzy.hefei.gov.cn/gggs/003002/moreinfo2.html
+  list_selector: li.ewb-list-item
+  title_selector: a
+  link_selector: a
+  date_selector: span.ewb-date
+  link_prefix: https://ggzy.hefei.gov.cn
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 贵阳公共资源交易中心
+  type: website
+  enabled: false
+  url: https://ggzy.guiyang.gov.cn/gcjs/zbgg_5372453/sg/
+  list_selector: div.ewb-list-item
+  title_selector: a
+  link_selector: a
+  date_selector: span.ewb-date
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 兰州公共资源交易中心
+  type: website
+  enabled: false
+  url: https://lzggzyjy.lanzhou.gov.cn/jygk/002001/002001001/list.html
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: span
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 洛阳公共资源交易中心
+  type: website
+  enabled: false
+  url: https://lyggzyjy.ly.gov.cn/010/010001/engineer.html
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: span
+  link_prefix: https://lyggzyjy.ly.gov.cn
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 福州公共资源交易中心
+  type: website
+  enabled: false  # Vue SPA，无法通过curl抓取。需要F12浏览器抓包找API端点
+  url: https://fzztb.fzsggzyjyfwzx.cn/
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: span
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 昆明公共资源交易中心
+  type: api
+  enabled: true
+  api_url: https://ggzy.yn.gov.cn/ynggfwpt-home-api/jyzyCenter/jyInfo/gcjs/getZbggList
+  method: POST
+  content_type: json
+  body_template:
+    page: 1
+    limit: 20
+  page_param: page
+  page_base: 1
+  page_size: 20
+  max_pages: 3
+  data_path: value.list
+  title_field: bulletinname
+  date_field: bulletinissuetime
+  id_field: guid
+  detail_url_template: https://ggzy.yn.gov.cn/tradeHall/tradeDetail?guid={content_id}
+  since_param: ""
+  verify_ssl: false
+  timeout: 15
+  request_interval: 2
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  - 工程
+  - 施工
+  - 监理
+  - 设计
+  - 建设
+  - 改造
+  - 总承包
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+  verify_ssl: false
+- name: 无锡公共资源交易中心
+  type: website
+  enabled: false
+  url: https://ggzyjy.wuxi.gov.cn/wxsggzyjyzxzl/jyxx/slgc/zbgg/index.shtml
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 常州公共资源交易中心
+  type: website
+  enabled: false
+  url: https://ggzy.xzsp.changzhou.gov.cn/jybggg/lawInfo.html
+  list_selector: table tr
+  title_selector: td a
+  link_selector: td a
+  date_selector: td:last-child
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 徐州公共资源交易中心
+  type: website
+  enabled: true
+  url: https://ggzy.zwb.xz.gov.cn/jyxx/list.html
+  list_selector: table tr
+  title_selector: td a
+  link_selector: td a
+  date_selector: td:last-child
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 温州公共资源交易中心
+  type: website
+  enabled: false
+  url: https://ggzyjy-eweb.wenzhou.gov.cn/col/col1229696276/index.html
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 上海公共资源交易中心
+  type: website
+  enabled: false
+  url: https://www.shggzy.com/jyxxgchx?isIndex=y
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 济南公共资源交易中心
+  type: website
+  enabled: false
+  url: https://jnggzy.jinan.gov.cn/jnggzyztb/front/noticelist.do?type=0&xuanxiang=1
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 长沙公共资源交易中心
+  type: website
+  enabled: false
+  url: https://changsha.hnsggzy.com/jygksz/1056227.jhtml
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 南昌公共资源交易中心
+  type: website
+  enabled: false
+  url: http://www.jxsncggzy.cn/ncsggzyjyzx/zbgg/jyxx_list.shtml
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 厦门公共资源交易中心
+  type: website
+  enabled: false
+  url: https://zyjy.as.xm.gov.cn/
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 南宁公共资源交易中心
+  type: website
+  enabled: false
+  url: https://ggzy.jgswj.gxzf.gov.cn/nnggzy/
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 佛山公共资源交易中心
+  type: website
+  enabled: false
+  url: http://jy.ggzy.foshan.gov.cn:3680/TPBank/newweb/jrjy/index.html
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 东莞公共资源交易中心
+  type: website
+  enabled: false
+  url: https://ggzy.dg.gov.cn/
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 乌鲁木齐公共资源交易中心
+  type: website
+  enabled: false
+  url: https://ggzy.wlmq.gov.cn/ggzy/jyxx/001002/001002001/
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 绍兴公共资源交易中心
+  type: website
+  enabled: false
+  url: https://ggb.sx.gov.cn/col/col1518854/index.html
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 芜湖公共资源交易中心
+  type: website
+  enabled: false
+  url: https://whsggzy.wuhu.gov.cn/whjyzx
+  list_selector: ul li
+  title_selector: a
+  link_selector: a
+  date_selector: ''
+  link_prefix: ''
+  keywords:
+  - 招标
+  - 采购
+  - 中标
+  - 成交
+  - 公告
+  - 地铁
+  - 轨道
+  - 城轨
+  - 铁路
+  - 交通
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+# ===== 里程统计与行业报告数据源 =====
+- name: 交通运输部城轨月报
+  type: mot
+  enabled: true
+  url: https://www.mot.gov.cn/shuju/fenxigongbao/yunlifenxi/
+  max_reports: 12
+  keywords:
+  - 城市轨道交通
+  - 运营数据
+  - 里程
+  timeout: 15
+  request_interval: 3
+- name: 维基百科城轨里程
+  type: wikipedia
+  enabled: false
+  # 维基百科在中国大陆可能无法直接访问，可通过 base_url 配置镜像
+  # 镜像示例: https://www.jinzhao.wiki
+  base_url: https://zh.wikipedia.org
+  fetch_city_details: true
+  max_cities: 0
+  keywords:
+  - 城市轨道交通
+  - 地铁
+  - 里程
+  timeout: 20
+  request_interval: 3
+- name: 中国城轨协会行业统计
+  type: website
+  enabled: true
+  url: https://www.camet.org.cn/xytj/tjxx/
+  list_selector: div.list a, ul li a, a
+  title_selector: ''
+  link_selector: a
+  date_selector: span.date, .time
+  link_prefix: https://www.camet.org.cn
+  keywords:
+  - 城市轨道交通
+  - 统计
+  - 报告
+  - 年度
+  - 里程
+  fetch_detail: false
+  timeout: 15
+  request_interval: 3
 wechat_sources:
 - name: 轨道世界
   type: wechat
@@ -413,19 +1256,21 @@ email:
   smtp_server: smtp.qq.com
   smtp_port: 465
   use_ssl: true
-  sender: your_email@qq.com
-  password: your_authorization_code
-  receiver: receiver_email@qq.com
+  sender: 11908173@qq.com
+  password: ywpeqwzddfxsbjcf
+  receiver: wanli_tsingtao@163.com
 schedule:
+  auto_send: true
+  fetch_on_start: true
   times:
   - 08:00
   - '12:00'
   timezone: Asia/Shanghai
-  fetch_on_start: true
 dedup:
   db_path: data/railbuddy.db
   retention_days: 90
   max_items_per_source: 100
+  max_age_days: 30
 logging:
   level: INFO
   file: logs/railbuddy.log

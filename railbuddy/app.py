@@ -62,7 +62,8 @@ class RailBuddyApp:
         self.fetcher_manager = FetcherManager(
             sources_config=self.config.sources,
             wechat_sources_config=self.config.wechat_sources,
-            max_items_per_source=self.config.max_items_per_source
+            max_items_per_source=self.config.max_items_per_source,
+            max_age_days=self.config.max_age_days
         )
 
         # 初始化邮件发送器
@@ -72,6 +73,7 @@ class RailBuddyApp:
         sched_cfg = self.config.schedule_config
         self.scheduler = TaskScheduler(timezone=sched_cfg.get("timezone", "Asia/Shanghai"))
         self.fetch_on_start = sched_cfg.get("fetch_on_start", True)
+        self.auto_send = sched_cfg.get("auto_send", True)
 
         # 退出标志
         self._running = True
@@ -121,6 +123,12 @@ class RailBuddyApp:
 
             if not all_items:
                 logger.info("未发现新项目，本次任务结束")
+                self._log_task_summary(0, task_start)
+                return
+
+            # 检查是否启用自动发送
+            if not self.auto_send:
+                logger.info(f">>> 自动发送已关闭，本次抓取 {len(all_items)} 条项目仅入库不发送")
                 self._log_task_summary(0, task_start)
                 return
 
@@ -254,6 +262,11 @@ class RailBuddyApp:
         all_items = pending + new_items
 
         if all_items:
+            if not self.auto_send:
+                logger.info(f"补偿抓取: 共 {len(all_items)} 条入库 "
+                             f"(遗留 {len(pending)} + 新增 {len(new_items)})，自动发送已关闭")
+                return
+
             logger.info(f"补偿抓取: 共 {len(all_items)} 条待发送 "
                          f"(遗留 {len(pending)} + 新增 {len(new_items)})")
             success = self.mailer.send(all_items)

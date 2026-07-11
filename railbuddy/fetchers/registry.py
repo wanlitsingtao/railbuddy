@@ -2,11 +2,15 @@
 
 import logging
 from typing import List, Dict, Optional
+from datetime import datetime, timedelta
 
 from .base import BaseFetcher
 from .website import WebsiteFetcher
 from .wechat import WechatFetcher
-from ..models import BidItem
+from .api import ApiFetcher
+from .wikipedia import WikipediaFetcher
+from .mot import MOTFetcher
+from ..models import BidItem, TransitMileage
 from ..database import Database
 
 logger = logging.getLogger(__name__)
@@ -15,6 +19,9 @@ logger = logging.getLogger(__name__)
 FETCHER_TYPES = {
     "website": WebsiteFetcher,
     "wechat": WechatFetcher,
+    "api": ApiFetcher,
+    "wikipedia": WikipediaFetcher,
+    "mot": MOTFetcher,
 }
 
 
@@ -29,9 +36,11 @@ class FetcherManager:
 
     def __init__(self, sources_config: List[Dict],
                  wechat_sources_config: List[Dict],
-                 max_items_per_source: int = 100):
+                 max_items_per_source: int = 100,
+                 max_age_days: int = 0):
         self.fetchers: List[BaseFetcher] = []
         self.max_items_per_source = max_items_per_source
+        self.max_age_days = max_age_days
 
         # 初始化网站抓取器
         for cfg in sources_config:
@@ -63,12 +72,14 @@ class FetcherManager:
         3. 执行抓取
         4. 去重：过滤掉数据库中已存在的条目
         5. 保存新条目到数据库
-        6. 更新抓取状态
+        6. 收集里程数据（如果抓取器支持）
+        7. 更新抓取状态
 
         Returns:
             新发现的、未发送的条目列表
         """
         all_new_items: List[BidItem] = []
+        all_mileage: List[TransitMileage] = []
 
         for fetcher in self.fetchers:
             if not fetcher.enabled:
@@ -80,6 +91,10 @@ class FetcherManager:
                 since_time = db.get_last_fetch_time(fetcher.name)
                 if since_time:
                     logger.info(f"[{fetcher.name}] 增量抓取（自 {since_time} 起）")
+                elif self.max_age_days > 0:
+                    # 首次抓取但配置了 max_age_days：只取最近 N 天
+                    since_time = (datetime.now() - timedelta(days=self.max_age_days)).isoformat()
+                    logger.info(f"[{fetcher.name}] 首次抓取（限最近 {self.max_age_days} 天，自 {since_time[:10]} 起）")
                 else:
                     logger.info(f"[{fetcher.name}] 首次抓取（全量）")
 
@@ -102,6 +117,13 @@ class FetcherManager:
                         all_new_items.append(item)
                         new_count += 1
 
+                # 收集里程数据（如果抓取器支持）
+                if hasattr(fetcher, 'mileage_records') and fetcher.mileage_records:
+                    all_mileage.extend(fetcher.mileage_records)
+                    logger.info(
+                        f"[{fetcher.name}] 里程数据: {len(fetcher.mileage_records)} 条"
+                    )
+
                 # 更新抓取状态
                 db.update_fetch_time(fetcher.name, len(items), "success")
 
@@ -112,6 +134,11 @@ class FetcherManager:
             except Exception as e:
                 logger.error(f"[{fetcher.name}] 抓取异常: {e}", exc_info=True)
                 db.update_fetch_time(fetcher.name, 0, "failed", str(e))
+
+        # 批量保存里程数据
+        if all_mileage:
+            saved = db.save_mileage_batch(all_mileage)
+            logger.info(f"里程数据批量保存: {saved}/{len(all_mileage)} 条")
 
         logger.info(f"全部源抓取完成，共新增 {len(all_new_items)} 条未发送条目")
         return all_new_items
