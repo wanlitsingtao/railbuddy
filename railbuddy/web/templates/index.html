@@ -2083,7 +2083,7 @@ async function seedHistoryData() {
         const result = await res.json();
         if (result.success) {
             const d = result.data;
-            statusEl.innerHTML = `<span style="color:#4CAF50">✓ 加载成功: ${d.annual_records || 0} 条年度数据 + ${d.line_records || 0} 条线路明细</span>`;
+            statusEl.innerHTML = `<span style="color:#4CAF50">✓ 加载成功: ${d.annual_records || 0} 条年度数据 + ${d.city_line_records || 0} 条线路明细</span>`;
             // 重新加载页面数据
             setTimeout(() => loadMileageStats(), 500);
         } else {

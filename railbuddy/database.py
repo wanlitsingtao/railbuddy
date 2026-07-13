@@ -549,6 +549,7 @@ class Database:
         """全国里程月度变化趋势
 
         返回每个月的：运营线路总里程、总线路数、覆盖城市数
+        排除 city='全国' 的聚合记录和 data_source='seed_history' 的全国合计，避免重复计算
         """
         with self._get_conn() as conn:
             rows = conn.execute("""
@@ -559,6 +560,8 @@ class Database:
                     SUM(length_km) AS total_km
                 FROM transit_mileage
                 WHERE status = 'operational'
+                  AND city != '全国'
+                  AND line_name != ''
                 GROUP BY data_month
                 ORDER BY data_month ASC
             """).fetchall()
@@ -689,24 +692,78 @@ class Database:
                 if not max_month:
                     continue
 
-                # 按制式分类统计（排除"总计"类型避免重复计算）
+                # 按制式分类统计（从 city='全国' 的记录获取里程数据）
+                # 优先使用 MOT 数据源（data_source='mot_monthly'），避免 seed_history 与 MOT 重复
                 type_rows = conn.execute("""
                     SELECT
                         system_type,
-                        COUNT(*) AS line_count,
-                        SUM(length_km) AS total_km,
-                        COUNT(DISTINCT city) AS city_count
+                        SUM(length_km) AS total_km
                     FROM transit_mileage
                     WHERE data_month = ? AND city = '全国'
                       AND system_type != '总计'
+                      AND data_source = (
+                          SELECT data_source FROM transit_mileage
+                          WHERE data_month = ? AND city = '全国' AND system_type = '地铁'
+                          ORDER BY CASE data_source
+                              WHEN 'mot_monthly' THEN 1
+                              WHEN 'wikipedia' THEN 2
+                              ELSE 3
+                          END
+                          LIMIT 1
+                      )
+                    GROUP BY system_type
+                """, (max_month, max_month)).fetchall()
+
+                # 从线路明细数据（city != '全国'）统计实际城市数和线路数
+                # 优先使用当前月份的数据，若不存在则使用最新月份的明细数据按开通年份过滤
+                detail_stats = conn.execute("""
+                    SELECT
+                        system_type,
+                        COUNT(DISTINCT city) AS city_count,
+                        COUNT(*) AS line_count
+                    FROM transit_mileage
+                    WHERE data_month = ? AND city != '全国'
+                      AND status = 'operational' AND length_km > 0
                     GROUP BY system_type
                 """, (max_month,)).fetchall()
 
-                type_data = {row["system_type"]: {
-                    "km": round(row["total_km"], 2) if row["total_km"] else 0,
-                    "lines": row["line_count"],
-                    "cities": row["city_count"]
-                } for row in type_rows}
+                # 如果当前月份没有线路明细数据，使用最新月份数据按开通年份过滤
+                if not detail_stats:
+                    latest_detail_month = conn.execute("""
+                        SELECT MAX(data_month) FROM transit_mileage
+                        WHERE city != '全国' AND opening_date IS NOT NULL AND opening_date != ''
+                    """).fetchone()[0]
+                    if latest_detail_month:
+                        year_str = str(year)
+                        detail_stats = conn.execute("""
+                            SELECT
+                                system_type,
+                                COUNT(DISTINCT city) AS city_count,
+                                COUNT(*) AS line_count
+                            FROM transit_mileage
+                            WHERE data_month = ? AND city != '全国'
+                              AND status = 'operational' AND length_km > 0
+                              AND opening_date IS NOT NULL AND opening_date != ''
+                              AND substr(opening_date, 1, 4) <= ?
+                            GROUP BY system_type
+                        """, (latest_detail_month, year_str)).fetchall()
+
+                # 合并制式数据：里程用全国合计，城市数和线路数用明细统计
+                type_data = {}
+                all_system_types = set()
+                for row in type_rows:
+                    all_system_types.add(row["system_type"])
+                for row in detail_stats:
+                    all_system_types.add(row["system_type"])
+
+                for st in all_system_types:
+                    type_row = next((r for r in type_rows if r["system_type"] == st), None)
+                    detail_row = next((r for r in detail_stats if r["system_type"] == st), None)
+                    type_data[st] = {
+                        "km": round(type_row["total_km"], 2) if type_row and type_row["total_km"] else 0,
+                        "lines": detail_row["line_count"] if detail_row else 0,
+                        "cities": detail_row["city_count"] if detail_row else 0
+                    }
 
                 total_km = sum(t["km"] for t in type_data.values())
                 total_lines = sum(t["lines"] for t in type_data.values())
@@ -740,16 +797,25 @@ class Database:
             result = []
             current_year = datetime.now().year
 
+            # 获取每个城市的最新月份
+            city_latest_months = conn.execute("""
+                SELECT city, MAX(data_month) AS max_month FROM transit_mileage
+                WHERE city != '全国' GROUP BY city
+            """).fetchall()
+            city_latest = {row["city"]: row["max_month"] for row in city_latest_months}
+
             for city_row in cities:
                 city = city_row["city"]
-                # 获取该城市所有线路
+                latest = city_latest.get(city, "")
+                # 获取该城市所有线路（只取最新月份的数据，避免重复）
                 lines = conn.execute("""
                     SELECT line_name, system_type, length_km, opening_date, stations
                     FROM transit_mileage
                     WHERE city = ? AND opening_date IS NOT NULL AND opening_date != ''
                       AND length_km > 0
+                      AND data_month = ?
                     GROUP BY line_name
-                """, (city,)).fetchall()
+                """, (city, latest)).fetchall()
 
                 if not lines:
                     continue
@@ -799,18 +865,19 @@ class Database:
                 "SELECT COUNT(DISTINCT data_month) FROM transit_mileage"
             ).fetchone()[0]
             cities = conn.execute(
-                "SELECT COUNT(DISTINCT city) FROM transit_mileage"
+                "SELECT COUNT(DISTINCT city) FROM transit_mileage WHERE city != '全国'"
             ).fetchone()[0]
             latest = conn.execute(
                 "SELECT MAX(data_month) FROM transit_mileage"
             ).fetchone()[0]
 
-            # 最新月份的运营总里程
+            # 最新月份的运营总里程（排除 city='全国' 的聚合记录，避免重复计算）
             operational_km = 0
             if latest:
                 row = conn.execute("""
                     SELECT SUM(length_km) FROM transit_mileage
                     WHERE data_month = ? AND status = 'operational'
+                      AND city != '全国'
                 """, (latest,)).fetchone()
                 operational_km = row[0] if row and row[0] else 0
 
