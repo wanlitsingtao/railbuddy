@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Dict
 from contextlib import contextmanager
 
-from .models import BidItem, TransitMileage
+from .models import BidItem, TransitMileage, BidRecord
 from .utils.text import generate_item_id
 
 logger = logging.getLogger(__name__)
@@ -132,6 +132,52 @@ class Database:
                 CREATE INDEX IF NOT EXISTS idx_mileage_month ON transit_mileage(data_month);
                 CREATE INDEX IF NOT EXISTS idx_mileage_status ON transit_mileage(status);
                 CREATE INDEX IF NOT EXISTS idx_mileage_type ON transit_mileage(system_type);
+
+                -- 项目中标记录表：通信/ISCS/信号/安防/PPP 中标数据
+                CREATE TABLE IF NOT EXISTS bid_records (
+                    record_id           TEXT PRIMARY KEY,      -- MD5(project_name + bid_date)
+                    province            TEXT DEFAULT '',
+                    city                TEXT DEFAULT '',
+                    category            TEXT DEFAULT '',        -- 通信/ISCS/信号/安防/PPP/BOT等
+                    winner              TEXT DEFAULT '',
+                    consortium          TEXT DEFAULT '',
+                    project_name        TEXT NOT NULL,
+                    project_overview    TEXT DEFAULT '',
+                    bid_scope           TEXT DEFAULT '',
+                    subsystems          TEXT DEFAULT '',
+                    bid_threshold       TEXT DEFAULT '',
+                    bidder              TEXT DEFAULT '',
+                    funding_source      TEXT DEFAULT '',
+                    evaluation_method   TEXT DEFAULT '',
+                    total_stations      INTEGER,
+                    underground_stations INTEGER,
+                    elevated_stations   INTEGER,
+                    ground_stations     INTEGER,
+                    opened_stations     INTEGER,
+                    line_type           TEXT DEFAULT '',
+                    length_km           REAL,
+                    goa_level           TEXT DEFAULT '',
+                    system_mode         TEXT DEFAULT '',
+                    is_opened           TEXT DEFAULT '',
+                    opening_date        TEXT,
+                    bid_date            TEXT,
+                    bid_amount          REAL,
+                    control_price       REAL,
+                    bid_link            TEXT DEFAULT '',
+                    tender_link         TEXT DEFAULT '',
+                    design_unit         TEXT DEFAULT '',
+                    platform_software_pis TEXT DEFAULT '',
+                    notes               TEXT DEFAULT '',
+                    data_source         TEXT DEFAULT 'excel_import',
+                    created_at          TEXT NOT NULL,
+                    updated_at          TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_bid_category ON bid_records(category);
+                CREATE INDEX IF NOT EXISTS idx_bid_city ON bid_records(city);
+                CREATE INDEX IF NOT EXISTS idx_bid_winner ON bid_records(winner);
+                CREATE INDEX IF NOT EXISTS idx_bid_date ON bid_records(bid_date);
+                CREATE INDEX IF NOT EXISTS idx_bid_province ON bid_records(province);
             """)
         logger.debug(f"数据库初始化完成: {self.db_path}")
 
@@ -428,6 +474,14 @@ class Database:
             mileage_cities = conn.execute(
                 "SELECT COUNT(DISTINCT city) FROM transit_mileage WHERE city != '全国'"
             ).fetchone()[0]
+            # 中标记录统计
+            bid_total = conn.execute("SELECT COUNT(*) FROM bid_records").fetchone()[0]
+            bid_categories = conn.execute(
+                "SELECT COUNT(DISTINCT category) FROM bid_records WHERE category IS NOT NULL AND category != ''"
+            ).fetchone()[0]
+            bid_cities = conn.execute(
+                "SELECT COUNT(DISTINCT city) FROM bid_records WHERE city IS NOT NULL AND city != ''"
+            ).fetchone()[0]
             return {
                 "total_items": total,
                 "sent_items": sent,
@@ -436,6 +490,9 @@ class Database:
                 "mileage_records": mileage_total,
                 "mileage_latest_month": mileage_latest or "",
                 "mileage_cities": mileage_cities,
+                "bid_records": bid_total,
+                "bid_categories": bid_categories,
+                "bid_cities": bid_cities,
             }
 
     def _row_to_item(self, row: sqlite3.Row) -> BidItem:
@@ -887,4 +944,333 @@ class Database:
                 "cities": cities,
                 "latest_month": latest or "",
                 "operational_km": round(operational_km, 2) if operational_km else 0,
+            }
+
+    # ============ 项目中标记录 CRUD ============
+
+    BID_RECORD_FIELDS = [
+        "record_id", "province", "city", "category", "winner", "consortium",
+        "project_name", "project_overview", "bid_scope", "subsystems",
+        "bid_threshold", "bidder", "funding_source", "evaluation_method",
+        "total_stations", "underground_stations", "elevated_stations",
+        "ground_stations", "opened_stations", "line_type", "length_km",
+        "goa_level", "system_mode", "is_opened", "opening_date", "bid_date",
+        "bid_amount", "control_price", "bid_link", "tender_link",
+        "design_unit", "platform_software_pis", "notes", "data_source",
+        "created_at", "updated_at"
+    ]
+
+    def save_bid_record(self, record: BidRecord) -> bool:
+        """保存中标记录（INSERT OR REPLACE，以 record_id 去重）
+
+        Returns:
+            True 表示保存成功（新增或更新），False 表示参数异常
+        """
+        values = (
+            record.record_id, record.province, record.city, record.category,
+            record.winner, record.consortium, record.project_name,
+            record.project_overview, record.bid_scope, record.subsystems,
+            record.bid_threshold, record.bidder, record.funding_source,
+            record.evaluation_method, record.total_stations,
+            record.underground_stations, record.elevated_stations,
+            record.ground_stations, record.opened_stations, record.line_type,
+            record.length_km, record.goa_level, record.system_mode,
+            record.is_opened, record.opening_date or "", record.bid_date or "",
+            record.bid_amount, record.control_price, record.bid_link,
+            record.tender_link, record.design_unit,
+            record.platform_software_pis, record.notes, record.data_source,
+            record.created_at, record.updated_at
+        )
+        placeholders = ",".join("?" * len(self.BID_RECORD_FIELDS))
+        fields_str = ",".join(self.BID_RECORD_FIELDS)
+        with self._get_conn() as conn:
+            conn.execute(
+                f"INSERT OR REPLACE INTO bid_records ({fields_str}) VALUES ({placeholders})",
+                values
+            )
+        return True
+
+    def save_bid_records_batch(self, records: List[BidRecord]) -> Dict:
+        """批量保存中标记录，返回导入统计
+
+        Returns:
+            {"total": N, "inserted": N, "updated": N}
+        """
+        if not records:
+            return {"total": 0, "inserted": 0, "updated": 0}
+
+        inserted = 0
+        updated = 0
+        with self._get_conn() as conn:
+            existing_ids = set(
+                row[0] for row in conn.execute("SELECT record_id FROM bid_records").fetchall()
+            )
+            placeholders = ",".join("?" * len(self.BID_RECORD_FIELDS))
+            fields_str = ",".join(self.BID_RECORD_FIELDS)
+            for r in records:
+                values = (
+                    r.record_id, r.province, r.city, r.category,
+                    r.winner, r.consortium, r.project_name,
+                    r.project_overview, r.bid_scope, r.subsystems,
+                    r.bid_threshold, r.bidder, r.funding_source,
+                    r.evaluation_method, r.total_stations,
+                    r.underground_stations, r.elevated_stations,
+                    r.ground_stations, r.opened_stations, r.line_type,
+                    r.length_km, r.goa_level, r.system_mode,
+                    r.is_opened, r.opening_date or "", r.bid_date or "",
+                    r.bid_amount, r.control_price, r.bid_link,
+                    r.tender_link, r.design_unit,
+                    r.platform_software_pis, r.notes, r.data_source,
+                    r.created_at, r.updated_at
+                )
+                if r.record_id in existing_ids:
+                    updated += 1
+                else:
+                    inserted += 1
+                conn.execute(
+                    f"INSERT OR REPLACE INTO bid_records ({fields_str}) VALUES ({placeholders})",
+                    values
+                )
+        logger.info(f"中标记录批量保存: total={len(records)}, inserted={inserted}, updated={updated}")
+        return {"total": len(records), "inserted": inserted, "updated": updated}
+
+    def get_bid_record(self, record_id: str) -> Optional[Dict]:
+        """根据 record_id 获取单条中标记录"""
+        with self._get_conn() as conn:
+            row = conn.execute(
+                "SELECT * FROM bid_records WHERE record_id = ?", (record_id,)
+            ).fetchone()
+            return dict(row) if row else None
+
+    def get_existing_bid_record_ids(self) -> set:
+        """获取数据库中所有已存在的 record_id 集合（用于批量去重检查）"""
+        with self._get_conn() as conn:
+            rows = conn.execute("SELECT record_id FROM bid_records").fetchall()
+            return {row[0] for row in rows}
+
+    def update_bid_record(self, record_id: str, fields: Dict) -> bool:
+        """更新中标记录的指定字段
+
+        Args:
+            record_id: 记录唯一ID
+            fields: 要更新的字段字典（key=列名, value=新值）
+
+        Returns:
+            True 表示更新成功，False 表示记录不存在
+        """
+        # 不允许修改 record_id
+        fields.pop("record_id", None)
+        if not fields:
+            return False
+
+        fields["updated_at"] = datetime.now().isoformat()
+        set_clause = ",".join(f"{k} = ?" for k in fields.keys())
+        params = list(fields.values()) + [record_id]
+
+        with self._get_conn() as conn:
+            result = conn.execute(
+                f"UPDATE bid_records SET {set_clause} WHERE record_id = ?", params
+            )
+            return result.rowcount > 0
+
+    def delete_bid_record(self, record_id: str) -> bool:
+        """删除中标记录
+
+        Returns:
+            True 表示删除成功，False 表示记录不存在
+        """
+        with self._get_conn() as conn:
+            result = conn.execute(
+                "DELETE FROM bid_records WHERE record_id = ?", (record_id,)
+            )
+            return result.rowcount > 0
+
+    def get_bid_records_paginated(self, page: int = 1, per_page: int = 20,
+                                  categories: List[str] = None, category: str = None,
+                                  city: str = None, province: str = None,
+                                  winner: str = None, keyword: str = None,
+                                  date_from: str = None, date_to: str = None,
+                                  is_opened: str = None) -> Dict:
+        """分页查询中标记录
+
+        Args:
+            categories: 多选分类列表（逗号分隔），与 category 互斥，优先使用 categories
+            category: 单选分类（兼容旧版）
+            keyword: 模糊查询关键词（搜索项目名称、中标单位、项目概况、备注）
+            date_from: 中标时间起始 YYYY-MM-DD（月份级时前端已补齐为 YYYY-MM-01）
+            date_to: 中标时间截止 YYYY-MM-DD（月份级时前端已补齐为 YYYY-MM-31）
+
+        Returns:
+            {"items": [...], "total": N, "page": P, "per_page": PP, "total_pages": TP}
+        """
+        conditions = []
+        params = []
+
+        # 分类筛选：多选优先，单选兼容
+        if categories:
+            placeholders = ",".join("?" * len(categories))
+            conditions.append(f"category IN ({placeholders})")
+            params.extend(categories)
+        elif category:
+            conditions.append("category = ?")
+            params.append(category)
+        if city:
+            conditions.append("city = ?")
+            params.append(city)
+        if province:
+            conditions.append("province = ?")
+            params.append(province)
+        if winner:
+            conditions.append("winner LIKE ?")
+            params.append(f"%{winner}%")
+        if is_opened:
+            conditions.append("is_opened = ?")
+            params.append(is_opened)
+        if keyword:
+            keywords = [k.strip() for k in keyword.split() if k.strip()]
+            if keywords:
+                or_parts = []
+                for kw in keywords:
+                    or_parts.append("(project_name LIKE ? OR winner LIKE ? OR project_overview LIKE ? OR notes LIKE ?)")
+                    params.extend([f"%{kw}%", f"%{kw}%", f"%{kw}%", f"%{kw}%"])
+                conditions.append("(" + " OR ".join(or_parts) + ")")
+        if date_from:
+            conditions.append("bid_date >= ?")
+            params.append(date_from)
+        if date_to:
+            conditions.append("bid_date <= ?")
+            params.append(date_to)
+
+        where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
+
+        with self._get_conn() as conn:
+            total = conn.execute(
+                f"SELECT COUNT(*) FROM bid_records{where_clause}", params
+            ).fetchone()[0]
+            offset = (page - 1) * per_page
+            rows = conn.execute(
+                f"SELECT * FROM bid_records{where_clause} ORDER BY bid_date DESC LIMIT ? OFFSET ?",
+                params + [per_page, offset]
+            ).fetchall()
+            return {
+                "items": [dict(row) for row in rows],
+                "total": total,
+                "page": page,
+                "per_page": per_page,
+                "total_pages": (total + per_page - 1) // per_page if per_page > 0 else 0
+            }
+
+    def get_bid_categories(self) -> List[str]:
+        """获取所有中标记录的工程分类列表"""
+        with self._get_conn() as conn:
+            rows = conn.execute(
+                "SELECT DISTINCT category FROM bid_records WHERE category IS NOT NULL AND category != '' ORDER BY category"
+            ).fetchall()
+            return [row["category"] for row in rows]
+
+    def get_bid_cities(self) -> List[str]:
+        """获取所有中标记录的城市列表"""
+        with self._get_conn() as conn:
+            rows = conn.execute(
+                "SELECT DISTINCT city FROM bid_records WHERE city IS NOT NULL AND city != '' ORDER BY city"
+            ).fetchall()
+            return [row["city"] for row in rows]
+
+    def get_bid_provinces(self) -> List[str]:
+        """获取所有中标记录的省份列表"""
+        with self._get_conn() as conn:
+            rows = conn.execute(
+                "SELECT DISTINCT province FROM bid_records WHERE province IS NOT NULL AND province != '' ORDER BY province"
+            ).fetchall()
+            return [row["province"] for row in rows]
+
+    def get_bid_stats(self) -> Dict:
+        """获取中标记录统计概要"""
+        with self._get_conn() as conn:
+            total = conn.execute("SELECT COUNT(*) FROM bid_records").fetchone()[0]
+            categories = conn.execute(
+                "SELECT category, COUNT(*) as count FROM bid_records WHERE category != '' GROUP BY category ORDER BY count DESC"
+            ).fetchall()
+            cities = conn.execute(
+                "SELECT COUNT(DISTINCT city) FROM bid_records WHERE city != ''"
+            ).fetchone()[0]
+            total_amount = conn.execute(
+                "SELECT SUM(bid_amount) FROM bid_records WHERE bid_amount IS NOT NULL AND bid_amount > 0"
+            ).fetchone()[0]
+            # 年度分布
+            year_dist = conn.execute(
+                "SELECT substr(bid_date, 1, 4) as year, COUNT(*) as count FROM bid_records WHERE bid_date IS NOT NULL AND bid_date != '' GROUP BY year ORDER BY year"
+            ).fetchall()
+            return {
+                "total": total,
+                "categories": [dict(r) for r in categories],
+                "cities": cities,
+                "total_amount": round(total_amount, 2) if total_amount else 0,
+                "year_distribution": [dict(r) for r in year_dist],
+            }
+
+    def get_bid_stats_filtered(self, categories: List[str] = None, category: str = None,
+                               city: str = None, province: str = None,
+                               keyword: str = None, date_from: str = None,
+                               date_to: str = None) -> Dict:
+        """获取中标记录统计概要（根据筛选条件动态计算）
+
+        Returns:
+            {"total_amount": float} - 当前筛选条件下的中标总金额
+        """
+        conditions = []
+        params = []
+
+        if categories:
+            placeholders = ",".join("?" * len(categories))
+            conditions.append(f"category IN ({placeholders})")
+            params.extend(categories)
+        elif category:
+            conditions.append("category = ?")
+            params.append(category)
+        if city:
+            conditions.append("city = ?")
+            params.append(city)
+        if province:
+            conditions.append("province = ?")
+            params.append(province)
+        if keyword:
+            keywords = [k.strip() for k in keyword.split() if k.strip()]
+            if keywords:
+                or_parts = []
+                for kw in keywords:
+                    or_parts.append("(project_name LIKE ? OR winner LIKE ? OR project_overview LIKE ? OR notes LIKE ?)")
+                    params.extend([f"%{kw}%", f"%{kw}%", f"%{kw}%", f"%{kw}%"])
+                conditions.append("(" + " OR ".join(or_parts) + ")")
+        if date_from:
+            conditions.append("bid_date >= ?")
+            params.append(date_from)
+        if date_to:
+            conditions.append("bid_date <= ?")
+            params.append(date_to)
+
+        where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
+
+        with self._get_conn() as conn:
+            total_amount = conn.execute(
+                f"SELECT SUM(bid_amount) FROM bid_records{where_clause} WHERE bid_amount IS NOT NULL AND bid_amount > 0".replace(
+                    " WHERE bid_amount", " AND bid_amount" if conditions else " WHERE bid_amount"
+                ),
+                params
+            ).fetchone()[0]
+
+            # 更简洁的方式：先构建完整条件（包括金额条件）
+            amount_condition = "bid_amount IS NOT NULL AND bid_amount > 0"
+            full_where = ""
+            if conditions:
+                full_where = " WHERE " + " AND ".join(conditions) + f" AND {amount_condition}"
+            else:
+                full_where = f" WHERE {amount_condition}"
+
+            total_amount = conn.execute(
+                f"SELECT SUM(bid_amount) FROM bid_records{full_where}", params
+            ).fetchone()[0]
+
+            return {
+                "total_amount": round(total_amount, 2) if total_amount else 0,
             }

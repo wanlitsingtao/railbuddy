@@ -52,8 +52,9 @@ class Config:
 
         sources = self._data.get("sources", [])
         wechat_sources = self._data.get("wechat_sources", [])
-        if not sources and not wechat_sources:
-            errors.append("至少需要配置一个数据源 (sources 或 wechat_sources)")
+        weibo_sources = self._data.get("weibo_sources", [])
+        if not sources and not wechat_sources and not weibo_sources:
+            errors.append("至少需要配置一个数据源 (sources / wechat_sources / weibo_sources)")
 
         if errors:
             raise ConfigError("配置校验失败:\n  - " + "\n  - ".join(errors))
@@ -71,6 +72,11 @@ class Config:
         return [s for s in self._data.get("wechat_sources", []) if s.get("enabled", True)]
 
     @property
+    def weibo_sources(self) -> List[Dict]:
+        """微博数据源列表（仅返回 enabled 的）"""
+        return [s for s in self._data.get("weibo_sources", []) if s.get("enabled", True)]
+
+    @property
     def raw_sources(self) -> List[Dict]:
         """全部网站数据源（含禁用的），用于 Web UI 展示"""
         return self._data.get("sources", [])
@@ -79,6 +85,11 @@ class Config:
     def raw_wechat_sources(self) -> List[Dict]:
         """全部公众号数据源（含禁用的），用于 Web UI 展示"""
         return self._data.get("wechat_sources", [])
+
+    @property
+    def raw_weibo_sources(self) -> List[Dict]:
+        """全部微博数据源（含禁用的），用于 Web UI 展示"""
+        return self._data.get("weibo_sources", [])
 
     @property
     def raw_data(self) -> Dict[str, Any]:
@@ -147,6 +158,10 @@ class Config:
     def update_wechat_sources(self, sources: List[Dict]):
         """更新公众号数据源列表（Web UI 调用）"""
         self._data["wechat_sources"] = sources
+
+    def update_weibo_sources(self, sources: List[Dict]):
+        """更新微博数据源列表（Web UI 调用）"""
+        self._data["weibo_sources"] = sources
 
     def update_email(self, email_config: Dict):
         """更新邮箱配置（Web UI 调用）"""

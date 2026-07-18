@@ -60,6 +60,7 @@ sources:
   - 轨道
   - 地铁
   - 城轨
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -80,6 +81,7 @@ sources:
   - 地铁
   - 城轨
   - 公告
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -145,6 +147,7 @@ sources:
   - 询比
   - 轨道
   - 地铁
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -167,6 +170,7 @@ sources:
   - 铁路
   - 轨道
   - 地铁
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -188,6 +192,7 @@ sources:
   - 公告
   - 地铁
   - 轨道
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -209,6 +214,7 @@ sources:
   - 公告
   - 地铁
   - 轨道
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -231,6 +237,7 @@ sources:
   - 公告
   - 轨道
   - 地铁
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -250,6 +257,7 @@ sources:
   - 轨道
   - 地铁
   - 公告
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -351,19 +359,19 @@ email:
   use_ssl: true
   sender: your_email@qq.com
   password: your_authorization_code
-  receiver: receiver1@qq.com, receiver2@163.com  # 多个收件人用逗号分隔
+  receiver: receiver1@qq.com, receiver2@163.com
 schedule:
   times:
   - 08:00
   - '12:00'
   timezone: Asia/Shanghai
   fetch_on_start: true
-  auto_send: true  # 启用自动发送：抓取后自动发邮件；设为 false 则只抓取不发邮件
+  auto_send: true
 dedup:
   db_path: data/railbuddy.db
   retention_days: 90
   max_items_per_source: 100
-  max_age_days: 30  # 首次抓取只取最近 N 天的数据，0 表示不限制
+  max_age_days: 30
 logging:
   level: INFO
   file: logs/railbuddy.log

@@ -88,6 +88,99 @@ class TransitMileage:
 
 
 @dataclass
+class BidRecord:
+    """项目中标记录
+
+    来源：轨道交通通信/综合监控/信号/安防/PPP 中标信息汇总表
+    去重主键：record_id = MD5(project_name + bid_date)
+    """
+    record_id: str = ""                    # 唯一ID（MD5(project_name + bid_date)）
+    province: str = ""                     # 省份
+    city: str = ""                         # 城市
+    category: str = ""                     # 工程分类（通信/ISCS/信号/安防/PPP/BOT等）
+    winner: str = ""                       # 中标单位
+    consortium: str = ""                   # 联合体（是/否）
+    project_name: str = ""                 # 项目名称
+    project_overview: str = ""             # 项目概况
+    bid_scope: str = ""                    # 招标范围
+    subsystems: str = ""                   # 包含子系统
+    bid_threshold: str = ""                # 招标门槛
+    bidder: str = ""                       # 招标人
+    funding_source: str = ""               # 资金来源
+    evaluation_method: str = ""            # 评标方法
+    total_stations: Optional[int] = None   # 招标站点总数（座）
+    underground_stations: Optional[int] = None  # 地下站（座）
+    elevated_stations: Optional[int] = None     # 高架站（座）
+    ground_stations: Optional[int] = None       # 地面站（座）
+    opened_stations: Optional[int] = None       # 开通站点数（座）
+    line_type: str = ""                    # 线路类型（CBTC/UTO/FAO等）
+    length_km: Optional[float] = None      # 里程（公里）
+    goa_level: str = ""                    # GoA设计等级
+    system_mode: str = ""                  # 系统制式
+    is_opened: str = ""                    # 是否开通（是/否）
+    opening_date: Optional[str] = None     # 开通时间 YYYY-MM-DD
+    bid_date: Optional[str] = None         # 中标时间 YYYY-MM-DD
+    bid_amount: Optional[float] = None     # 中标金额（万元）
+    control_price: Optional[float] = None  # 控制价（万元）
+    bid_link: str = ""                     # 中标链接
+    tender_link: str = ""                  # 招标链接
+    design_unit: str = ""                  # 设计单位
+    platform_software_pis: str = ""        # 采用的平台软件（PIS）
+    notes: str = ""                        # 备注
+    data_source: str = "excel_import"      # 数据来源
+    created_at: str = ""                   # 创建时间
+    updated_at: str = ""                   # 更新时间
+
+    def __post_init__(self):
+        if not self.record_id:
+            self.record_id = generate_item_id(self.project_name, self.bid_date or "")
+        if not self.created_at:
+            self.created_at = datetime.now().isoformat()
+        if not self.updated_at:
+            self.updated_at = self.created_at
+
+    def to_dict(self) -> dict:
+        return {
+            "record_id": self.record_id,
+            "province": self.province,
+            "city": self.city,
+            "category": self.category,
+            "winner": self.winner,
+            "consortium": self.consortium,
+            "project_name": self.project_name,
+            "project_overview": self.project_overview,
+            "bid_scope": self.bid_scope,
+            "subsystems": self.subsystems,
+            "bid_threshold": self.bid_threshold,
+            "bidder": self.bidder,
+            "funding_source": self.funding_source,
+            "evaluation_method": self.evaluation_method,
+            "total_stations": self.total_stations,
+            "underground_stations": self.underground_stations,
+            "elevated_stations": self.elevated_stations,
+            "ground_stations": self.ground_stations,
+            "opened_stations": self.opened_stations,
+            "line_type": self.line_type,
+            "length_km": self.length_km,
+            "goa_level": self.goa_level,
+            "system_mode": self.system_mode,
+            "is_opened": self.is_opened,
+            "opening_date": self.opening_date or "",
+            "bid_date": self.bid_date or "",
+            "bid_amount": self.bid_amount,
+            "control_price": self.control_price,
+            "bid_link": self.bid_link,
+            "tender_link": self.tender_link,
+            "design_unit": self.design_unit,
+            "platform_software_pis": self.platform_software_pis,
+            "notes": self.notes,
+            "data_source": self.data_source,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }
+
+
+@dataclass
 class SourceState:
     """数据源状态"""
     name: str                           # 源名称

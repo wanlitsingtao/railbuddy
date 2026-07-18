@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>RailBuddy 管理面板</title>
     <style>
         :root {
@@ -13,6 +16,8 @@
             --warning: #f9ab00;
             --danger: #ea4335;
             --bg: #f0f2f5;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
             --card-bg: #ffffff;
             --text: #1f2937;
             --text-secondary: #6b7280;
@@ -141,6 +146,8 @@
         .badge-danger { background: #fce8e6; color: var(--danger); }
         .badge-info { background: var(--primary-light); color: var(--primary); }
         .badge-secondary { background: #f1f3f4; color: var(--text-secondary); }
+        .badge-primary { background: #e8eaf6; color: #3f51b5; }
+        .badge-dark { background: #e0e0e0; color: #424242; }
 
         /* ===== 按钮 ===== */
         .btn {
@@ -323,12 +330,92 @@
             color: var(--text-secondary);
             white-space: nowrap;
         }
-        .date-range-wrap input[type="date"] {
+        .date-range-wrap input[type="date"],
+        .date-range-wrap input[type="month"] {
             padding: 6px 10px;
             border: 1px solid var(--border);
             border-radius: 6px;
             font-size: 13px;
             width: 130px;
+        }
+
+        /* ===== 多选分类下拉 ===== */
+        .multi-select-wrap {
+            position: relative;
+            display: inline-block;
+        }
+        .multi-select-btn {
+            padding: 7px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            background: var(--bg-primary);
+            min-width: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 4px;
+        }
+        .multi-select-btn::after {
+            content: '▾';
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .multi-select-btn.has-selected {
+            background: #e3f2fd;
+            border-color: #1976d2;
+        }
+        .multi-select-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            z-index: 1000;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            min-width: 200px;
+            padding: 8px;
+            margin-top: 4px;
+        }
+        .multi-select-dropdown.show {
+            display: block;
+        }
+        .multi-select-actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 6px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border);
+        }
+        .multi-select-actions button {
+            font-size: 12px;
+            padding: 2px 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--bg-secondary);
+            cursor: pointer;
+        }
+        .multi-select-option {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 4px;
+            cursor: pointer;
+            font-size: 13px;
+            border-radius: 4px;
+        }
+        .multi-select-option:hover {
+            background: var(--bg-secondary);
+        }
+        .multi-select-option input[type="checkbox"] {
+            margin: 0;
+            cursor: pointer;
+        }
+        .multi-select-option .badge {
+            font-size: 11px;
         }
         .date-range-wrap .date-sep {
             color: var(--text-tertiary);
@@ -511,6 +598,7 @@
             <li data-page="sources"><span class="icon">🌐</span> 网站数据源</li>
             <li data-page="wechat"><span class="icon">📱</span> 公众号数据源</li>
             <li data-page="items"><span class="icon">📋</span> 行业动态</li>
+            <li data-page="bid"><span class="icon">🏆</span> 中标查询</li>
             <li data-page="mileage"><span class="icon">📈</span> 里程统计</li>
             <li data-page="logs"><span class="icon">📧</span> 发送日志</li>
             <li data-page="email"><span class="icon">✉️</span> 邮箱设置</li>
@@ -618,6 +706,59 @@
             <div class="card">
                 <div id="itemsTable"><div class="loading">加载中...</div></div>
                 <div id="itemsPagination" class="pagination"></div>
+            </div>
+        </div>
+
+        <!-- 中标查询 -->
+        <div class="page" id="page-bid">
+            <div class="page-header">
+                <h2>中标查询</h2>
+                <div class="desc">轨道交通通信、综合监控、信号等项目中标信息查询与管理</div>
+            </div>
+            <div class="stats-grid" id="bidStatsGrid" style="margin-bottom:20px">
+                <div class="stat-card">
+                    <div class="label">中标总金额（万元）</div>
+                    <div class="value warning" id="bidTotalAmount">0.00</div>
+                </div>
+            </div>
+            <div class="filter-bar">
+                <div class="multi-select-wrap" id="bidCategoryWrap">
+                    <button class="multi-select-btn" id="bidCategoryBtn" onclick="toggleMultiSelect('bidCategoryDropdown')">选择分类</button>
+                    <div class="multi-select-dropdown" id="bidCategoryDropdown">
+                        <div class="multi-select-actions">
+                            <button onclick="selectAllCategories()">全选</button>
+                            <button onclick="clearAllCategories()">清空</button>
+                        </div>
+                        <div id="bidCategoryOptions"></div>
+                    </div>
+                </div>
+                <select id="bidFilterProvince" onchange="loadBidRecords(1)"><option value="">全部省份</option></select>
+                <select id="bidFilterCity" onchange="loadBidRecords(1)"><option value="">全部城市</option></select>
+                <div class="date-range-wrap">
+                    <span class="date-label">中标月份</span>
+                    <input type="month" id="bidFilterDateFrom" onchange="loadBidRecords(1)">
+                    <span class="date-sep">~</span>
+                    <input type="month" id="bidFilterDateTo" onchange="loadBidRecords(1)">
+                </div>
+                <div class="search-input-wrap">
+                    <input type="text" id="bidFilterKeyword" placeholder="搜索项目名称/中标单位/备注..." autocomplete="off" onkeydown="if(event.key==='Enter'){loadBidRecords(1)}">
+                    <span class="search-clear" id="bidSearchClear" onclick="clearBidSearch()">&times;</span>
+                </div>
+                <button class="btn btn-outline btn-sm" onclick="loadBidRecords(1)">搜索</button>
+                <button class="btn btn-outline btn-sm" onclick="clearBidFilters()">清除筛选</button>
+            </div>
+            <div class="action-bar">
+                <button class="btn btn-primary btn-sm" onclick="openBidModal()">+ 新增中标记录</button>
+                <button class="btn btn-outline btn-sm" onclick="loadBidRecords()">🔁 刷新</button>
+                <button class="btn btn-outline btn-sm" onclick="exportBidExcel()">📊 导出Excel</button>
+                <button class="btn btn-outline btn-sm" onclick="downloadImportTemplate()">📋 导出模版</button>
+                <button class="btn btn-outline btn-sm" onclick="showImportModal()">📥 从Excel导入</button>
+                <button class="btn btn-outline btn-sm" onclick="fillMissingAmounts()" id="btnFillAmounts">🔍 补全金额</button>
+                <span id="bidImportStatus" style="font-size:13px;color:var(--text-secondary);margin-left:8px"></span>
+            </div>
+            <div class="card">
+                <div id="bidRecordsTable" style="overflow-x:auto"><div class="loading">加载中...</div></div>
+                <div id="bidRecordsPagination" class="pagination"></div>
             </div>
         </div>
 
@@ -937,6 +1078,188 @@
     </div>
 </div>
 
+<!-- 中标记录新增/编辑模态框 -->
+<div class="modal-overlay" id="bidModal">
+    <div class="modal" style="width:800px">
+        <div class="modal-header">
+            <h3 id="bidModalTitle">新增中标记录</h3>
+            <span class="modal-close" onclick="closeModal('bidModal')">&times;</span>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="bidEditId" value="">
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label>项目名称 <span class="hint" style="color:var(--danger)">(必填)</span></label>
+                    <input type="text" class="form-control" id="bidProjectName" placeholder="如：XX线信号系统采购项目">
+                </div>
+                <div class="form-group">
+                    <label>工程分类</label>
+                    <select class="form-control" id="bidCategory">
+                        <option value="">请选择</option>
+                        <option value="通信">通信</option>
+                        <option value="综合监控">综合监控</option>
+                        <option value="信号">信号</option>
+                        <option value="安防">安防</option>
+                        <option value="消防">消防</option>
+                        <option value="线网">线网</option>
+                        <option value="弱电">弱电</option>
+                        <option value="大总包">大总包</option>
+                        <option value="施工总包">施工总包</option>
+                        <option value="BOT">BOT</option>
+                        <option value="PPP">PPP</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>中标日期</label>
+                    <input type="date" class="form-control" id="bidDate">
+                </div>
+            </div>
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label>省份</label>
+                    <input type="text" class="form-control" id="bidProvince" placeholder="如：广东">
+                </div>
+                <div class="form-group">
+                    <label>城市</label>
+                    <input type="text" class="form-control" id="bidCity" placeholder="如：深圳">
+                </div>
+                <div class="form-group">
+                    <label>中标单位</label>
+                    <input type="text" class="form-control" id="bidWinner" placeholder="如：交控科技">
+                </div>
+            </div>
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label>联合体</label>
+                    <input type="text" class="form-control" id="bidConsortium" placeholder="联合体成员">
+                </div>
+                <div class="form-group">
+                    <label>中标金额（万元）</label>
+                    <input type="text" class="form-control" id="bidAmount" placeholder="如：25800">
+                </div>
+                <div class="form-group">
+                    <label>开通状态</label>
+                    <select class="form-control" id="bidIsOpened">
+                        <option value="">请选择</option>
+                        <option value="已开通">已开通</option>
+                        <option value="在建">在建</option>
+                        <option value="未开通">未开通</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>项目概况</label>
+                    <textarea class="form-control" id="bidOverview" rows="2" placeholder="项目概况描述"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>招标范围</label>
+                    <textarea class="form-control" id="bidScope" rows="2" placeholder="招标范围描述"></textarea>
+                </div>
+            </div>
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label>线路类型</label>
+                    <input type="text" class="form-control" id="bidLineType" placeholder="如：地铁/轻轨/单轨">
+                </div>
+                <div class="form-group">
+                    <label>线路长度(km)</label>
+                    <input type="number" class="form-control" id="bidLengthKm" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>站点数(总站)</label>
+                    <input type="number" class="form-control" id="bidTotalStations" step="1">
+                </div>
+            </div>
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label>GOA等级</label>
+                    <select class="form-control" id="bidGoaLevel">
+                        <option value="">请选择</option>
+                        <option value="GOA1">GOA1</option>
+                        <option value="GOA2">GOA2</option>
+                        <option value="GOA3">GOA3</option>
+                        <option value="GOA4">GOA4</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>制式模式</label>
+                    <input type="text" class="form-control" id="bidSystemMode" placeholder="如：CBTC/互联互通">
+                </div>
+                <div class="form-group">
+                    <label>控制价（万元）</label>
+                    <input type="text" class="form-control" id="bidControlPrice" placeholder="如：30000">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>备注</label>
+                    <textarea class="form-control" id="bidNotes" rows="2" placeholder="其他备注信息"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>招标链接</label>
+                    <input type="text" class="form-control" id="bidLink" placeholder="招标公告URL">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('bidModal')">取消</button>
+            <button class="btn btn-primary" onclick="saveBidRecord()">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- 中标记录导入模态框 -->
+<div class="modal-overlay" id="importModal">
+    <div class="modal" style="width:550px">
+        <div class="modal-header">
+            <h3>从Excel导入中标记录</h3>
+            <span class="modal-close" onclick="closeModal('importModal')">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>导入说明</label>
+                <div style="font-size:13px;color:var(--text-secondary);line-height:1.6">
+                    1. 先下载导出模版（点击上方"📋 导出模版"按钮）<br>
+                    2. 按模版格式填写中标数据<br>
+                    3. 选择填好的Excel文件，系统会先检查重复<br>
+                    <b>注意：</b>项目名称+中标日期相同的记录会被检测出来
+                </div>
+            </div>
+            <div class="form-group">
+                <label>选择Excel文件</label>
+                <input type="file" id="importFileInput" accept=".xlsx,.xls" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-primary)">
+            </div>
+            <!-- 重复检查结果区域 -->
+            <div id="importCheckResult" style="display:none;margin-top:12px;padding:12px;background:var(--bg-secondary);border-radius:6px;"></div>
+            <div id="importProgress" style="margin-top:12px;font-size:13px;color:var(--text-secondary)"></div>
+        </div>
+        <div class="modal-footer" id="importModalFooter">
+            <button class="btn btn-outline" onclick="closeModal('importModal')">取消</button>
+            <button class="btn btn-primary" id="btnImportCheck" onclick="doImportCheck()">下一步：检查重复</button>
+        </div>
+    </div>
+</div>
+
+<!-- 中标记录详情模态框 -->
+<div class="modal-overlay" id="bidDetailModal">
+    <div class="modal" style="width:800px">
+        <div class="modal-header">
+            <h3>中标记录详情</h3>
+            <span class="modal-close" onclick="closeModal('bidDetailModal')">&times;</span>
+        </div>
+        <div class="modal-body" id="bidDetailContent">
+            <div class="loading">加载中...</div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('bidDetailModal')">关闭</button>
+            <button class="btn btn-primary btn-sm" onclick="editBidFromDetail()">编辑</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteBidFromDetail()">删除</button>
+        </div>
+    </div>
+</div>
+
 <script>
 // ===== 通用工具 =====
 const API = '/api';
@@ -976,6 +1299,14 @@ function escapeHtml(s) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+/** 千分位格式化金额（万元），格式：000,000,000.00 */
+function formatMoney(val) {
+    if (val === null || val === undefined || val === '' || val === 0) return '-';
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    if (isNaN(num)) return '-';
+    return num.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function fmtDateTime(s) {
     if (!s) return '-';
     try { return new Date(s).toLocaleString('zh-CN'); } catch { return s; }
@@ -994,6 +1325,7 @@ document.querySelectorAll('.nav-menu li').forEach(li => {
         else if (page === 'sources') loadSources();
         else if (page === 'wechat') loadWechatSources();
         else if (page === 'items') loadItems(1);
+        else if (page === 'bid') loadBidRecords(1);
         else if (page === 'mileage') loadMileageStats();
         else if (page === 'logs') loadSendLogs();
         else if (page === 'email') loadEmailConfig();
@@ -2534,6 +2866,728 @@ function closeModal(id) {
 document.querySelectorAll('.modal-overlay').forEach(o => {
     o.addEventListener('click', e => { if (e.target === o) o.classList.remove('active'); });
 });
+
+// ===== 中标查询 =====
+let bidCurrentPage = 1;
+let bidDetailId = '';
+let selectedCategories = [];
+
+// ===== 多选分类下拉 =====
+function toggleMultiSelect(dropdownId) {
+    const dd = document.getElementById(dropdownId);
+    dd.classList.toggle('show');
+}
+// 点击外部关闭下拉
+document.addEventListener('click', function(e) {
+    const wrap = document.getElementById('bidCategoryWrap');
+    if (wrap && !wrap.contains(e.target)) {
+        document.getElementById('bidCategoryDropdown').classList.remove('show');
+    }
+});
+
+function selectAllCategories() {
+    selectedCategories = [];
+    const options = document.getElementById('bidCategoryOptions');
+    options.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.checked = true;
+        selectedCategories.push(cb.value);
+    });
+    updateCategoryBtn();
+    loadBidRecords(1);
+}
+
+function clearAllCategories() {
+    selectedCategories = [];
+    const options = document.getElementById('bidCategoryOptions');
+    options.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    updateCategoryBtn();
+    loadBidRecords(1);
+}
+
+function toggleCategory(cat) {
+    const idx = selectedCategories.indexOf(cat);
+    if (idx >= 0) selectedCategories.splice(idx, 1);
+    else selectedCategories.push(cat);
+    updateCategoryBtn();
+    loadBidRecords(1);
+}
+
+function updateCategoryBtn() {
+    const btn = document.getElementById('bidCategoryBtn');
+    if (selectedCategories.length === 0) {
+        btn.textContent = '选择分类';
+        btn.classList.remove('has-selected');
+    } else if (selectedCategories.length <= 3) {
+        btn.textContent = selectedCategories.join('、');
+        btn.classList.add('has-selected');
+    } else {
+        btn.textContent = selectedCategories.length + '个分类';
+        btn.classList.add('has-selected');
+    }
+    // 补上箭头
+    btn.innerHTML = btn.textContent + ' <span style="font-size:12px;color:var(--text-secondary)">▾</span>';
+}
+
+async function loadBidStats(paramsStr) {
+    try {
+        let url = '/bid-records/stats';
+        if (paramsStr) url += '?' + paramsStr;
+        const res = await apiGet(url);
+        if (!res.success) throw new Error(res.error);
+        const d = res.data;
+        const totalAmount = d.total_amount ? formatMoney(d.total_amount) : '0.00';
+        document.getElementById('bidTotalAmount').textContent = totalAmount;
+    } catch(e) {
+        document.getElementById('bidTotalAmount').textContent = '0.00';
+    }
+}
+
+async function loadBidFilterOptions() {
+    try {
+        const res = await apiGet('/bid-records?page=1&per_page=1');
+        if (!res.success) return;
+        // 分类多选下拉
+        const cats = res.categories || [];
+        const catColors = {'信号':'badge-danger','综合监控':'badge-info','通信':'badge-success','安防':'badge-warning','弱电':'badge-secondary','PPP':'badge-primary','大总包':'badge-dark','施工总包':'badge-dark','BOT':'badge-primary','消防':'badge-warning','线网':'badge-info','其他':'badge-secondary'};
+        const catOptions = document.getElementById('bidCategoryOptions');
+        catOptions.innerHTML = cats.map(c => `<div class="multi-select-option" onclick="toggleCategory('${c}')">
+            <input type="checkbox" value="${c}" ${selectedCategories.includes(c)?'checked':''} onclick="event.stopPropagation();toggleCategory('${c}')">
+            <span class="badge ${catColors[c]||'badge-secondary'}">${c}</span>
+        </div>`).join('');
+        // 省份下拉
+        const provSel = document.getElementById('bidFilterProvince');
+        const provs = res.provinces || [];
+        provSel.innerHTML = '<option value="">全部省份</option>' + provs.map(p => `<option value="${p}">${p}</option>`).join('');
+        // 城市下拉
+        const citySel = document.getElementById('bidFilterCity');
+        const cities = res.cities || [];
+        citySel.innerHTML = '<option value="">全部城市</option>' + cities.map(c => `<option value="${c}">${c}</option>`).join('');
+    } catch(e) { console.error('Filter options load failed', e); }
+}
+
+async function loadBidRecords(page) {
+    if (!page) page = bidCurrentPage;
+    bidCurrentPage = page;
+    const catsParam = selectedCategories.join(',');
+    const prov = document.getElementById('bidFilterProvince').value;
+    const city = document.getElementById('bidFilterCity').value;
+    const dateFrom = document.getElementById('bidFilterDateFrom').value;
+    const dateTo = document.getElementById('bidFilterDateTo').value;
+    const keyword = document.getElementById('bidFilterKeyword').value;
+
+    let url = `/bid-records?page=${page}&per_page=20`;
+    if (catsParam) url += `&categories=${encodeURIComponent(catsParam)}`;
+    if (prov) url += `&province=${encodeURIComponent(prov)}`;
+    if (city) url += `&city=${encodeURIComponent(city)}`;
+    if (dateFrom) url += `&date_from=${dateFrom}-01`;
+    if (dateTo) url += `&date_to=${dateTo}-31`;
+    if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`;
+
+    try {
+        const res = await apiGet(url);
+        if (!res.success) throw new Error(res.error);
+        const d = res.data;
+        // 首次加载时更新筛选下拉
+        loadBidFilterOptions();
+        // 动态统计：传入当前筛选条件
+        let statsParams = '';
+        if (catsParam) statsParams += `categories=${encodeURIComponent(catsParam)}&`;
+        if (prov) statsParams += `province=${encodeURIComponent(prov)}&`;
+        if (city) statsParams += `city=${encodeURIComponent(city)}&`;
+        if (dateFrom) statsParams += `date_from=${dateFrom}-01&`;
+        if (dateTo) statsParams += `date_to=${dateTo}-31&`;
+        if (keyword) statsParams += `keyword=${encodeURIComponent(keyword)}&`;
+        loadBidStats(statsParams);
+
+        if (!d.items || d.items.length === 0) {
+            document.getElementById('bidRecordsTable').innerHTML = '<div class="empty-state"><div class="icon">🏆</div>暂无中标记录</div>';
+            document.getElementById('bidRecordsPagination').innerHTML = '';
+            return;
+        }
+
+        const rows = d.items.map((item, i) => {
+            const amount = item.bid_amount ? formatMoney(item.bid_amount) : '-';
+            const ctrlPrice = item.control_price ? formatMoney(item.control_price) : '-';
+            const catColors = {'信号':'badge-danger','综合监控':'badge-info','通信':'badge-success','安防':'badge-warning','弱电':'badge-secondary','PPP':'badge-primary','大总包':'badge-dark','施工总包':'badge-dark','BOT':'badge-primary','消防':'badge-warning','线网':'badge-info','其他':'badge-secondary'};
+            const catBadge = item.category ? `<span class="badge ${catColors[item.category]||'badge-secondary'}">${escapeHtml(item.category)}</span>` : '';
+            const notes = item.notes ? escapeHtml(item.notes.length > 30 ? item.notes.substring(0,30)+'...' : item.notes) : '-';
+            return `<tr>
+                <td>${(d.page - 1) * d.per_page + i + 1}</td>
+                <td>${catBadge}</td>
+                <td class="td-break" style="max-width:250px">${escapeHtml(item.project_name || '')}</td>
+                <td>${escapeHtml(item.city || '')}</td>
+                <td class="td-break" style="max-width:150px">${escapeHtml(item.winner || '')}</td>
+                <td style="text-align:right">${amount}</td>
+                <td style="text-align:right">${ctrlPrice}</td>
+                <td>${item.bid_date || '-'}</td>
+                <td class="td-break" style="max-width:200px" title="${escapeHtml(item.notes || '')}">${notes}</td>
+                <td>
+                    <span class="link-actions">
+                        <button onclick="viewBidDetail('${item.record_id}')">详情</button>
+                        <button onclick="editBidRecord('${item.record_id}')">编辑</button>
+                        <button onclick="deleteBidRecord('${item.record_id}')">删除</button>
+                    </span>
+                </td>
+            </tr>`;
+        }).join('');
+
+        document.getElementById('bidRecordsTable').innerHTML = `
+            <table style="min-width:1200px">
+                <thead><tr>
+                    <th>#</th><th>分类</th><th>项目名称</th><th>城市</th><th>中标单位</th><th style="text-align:right">中标金额（万元）</th><th style="text-align:right">控制价（万元）</th><th>中标日期</th><th>备注</th><th>操作</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        `;
+
+        // 分页
+        const totalPages = d.total_pages || Math.ceil(d.total / d.per_page);
+        let paginationHtml = `<span class="page-info">共 ${d.total} 条</span>`;
+        paginationHtml += `<button ${d.page<=1?'disabled':''} onclick="loadBidRecords(${d.page-1})">上一页</button>`;
+        for (let p = 1; p <= totalPages; p++) {
+            if (p === 1 || p === totalPages || Math.abs(p - d.page) <= 2) {
+                paginationHtml += `<button class="${p===d.page?'active':''}" onclick="loadBidRecords(${p})">${p}</button>`;
+            } else if (Math.abs(p - d.page) === 3) {
+                paginationHtml += '<span class="page-info">...</span>';
+            }
+        }
+        paginationHtml += `<button ${d.page>=totalPages?'disabled':''} onclick="loadBidRecords(${d.page+1})">下一页</button>`;
+        document.getElementById('bidRecordsPagination').innerHTML = paginationHtml;
+    } catch(e) {
+        document.getElementById('bidRecordsTable').innerHTML = '<div class="empty-state">加载失败: ' + escapeHtml(e.message) + '</div>';
+        toast('中标记录加载失败: ' + e.message, 'error');
+    }
+}
+
+function clearBidSearch() {
+    document.getElementById('bidFilterKeyword').value = '';
+    loadBidRecords(1);
+}
+
+function clearBidFilters() {
+    selectedCategories = [];
+    updateCategoryBtn();
+    document.getElementById('bidCategoryOptions').querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    document.getElementById('bidFilterProvince').value = '';
+    document.getElementById('bidFilterCity').value = '';
+    document.getElementById('bidFilterDateFrom').value = '';
+    document.getElementById('bidFilterDateTo').value = '';
+    document.getElementById('bidFilterKeyword').value = '';
+    loadBidRecords(1);
+}
+
+function openBidModal(editId) {
+    document.getElementById('bidEditId').value = editId || '';
+    document.getElementById('bidModalTitle').textContent = editId ? '编辑中标记录' : '新增中标记录';
+    // 清空表单
+    if (!editId) {
+        document.getElementById('bidProjectName').value = '';
+        document.getElementById('bidCategory').value = '';
+        document.getElementById('bidDate').value = '';
+        document.getElementById('bidProvince').value = '';
+        document.getElementById('bidCity').value = '';
+        document.getElementById('bidWinner').value = '';
+        document.getElementById('bidConsortium').value = '';
+        document.getElementById('bidAmount').value = '';
+        document.getElementById('bidIsOpened').value = '';
+        document.getElementById('bidOverview').value = '';
+        document.getElementById('bidScope').value = '';
+        document.getElementById('bidLineType').value = '';
+        document.getElementById('bidLengthKm').value = '';
+        document.getElementById('bidTotalStations').value = '';
+        document.getElementById('bidGoaLevel').value = '';
+        document.getElementById('bidSystemMode').value = '';
+        document.getElementById('bidControlPrice').value = '';
+        document.getElementById('bidNotes').value = '';
+        document.getElementById('bidLink').value = '';
+    }
+    document.getElementById('bidModal').classList.add('active');
+}
+
+async function editBidRecord(recordId) {
+    try {
+        const res = await apiGet('/bid-records/' + recordId);
+        if (!res.success) throw new Error(res.error);
+        const d = res.data;
+        openBidModal(recordId);
+        document.getElementById('bidProjectName').value = d.project_name || '';
+        document.getElementById('bidCategory').value = d.category || '';
+        document.getElementById('bidDate').value = d.bid_date || '';
+        document.getElementById('bidProvince').value = d.province || '';
+        document.getElementById('bidCity').value = d.city || '';
+        document.getElementById('bidWinner').value = d.winner || '';
+        document.getElementById('bidConsortium').value = d.consortium || '';
+        document.getElementById('bidAmount').value = d.bid_amount ? d.bid_amount : '';
+        document.getElementById('bidIsOpened').value = d.is_opened || '';
+        document.getElementById('bidOverview').value = d.project_overview || '';
+        document.getElementById('bidScope').value = d.bid_scope || '';
+        document.getElementById('bidLineType').value = d.line_type || '';
+        document.getElementById('bidLengthKm').value = d.length_km || '';
+        document.getElementById('bidTotalStations').value = d.total_stations || '';
+        document.getElementById('bidGoaLevel').value = d.goa_level || '';
+        document.getElementById('bidSystemMode').value = d.system_mode || '';
+        document.getElementById('bidControlPrice').value = d.control_price || '';
+        document.getElementById('bidNotes').value = d.notes || '';
+        document.getElementById('bidLink').value = d.bid_link || '';
+    } catch(e) {
+        toast('加载记录失败: ' + e.message, 'error');
+    }
+}
+
+async function saveBidRecord() {
+    const editId = document.getElementById('bidEditId').value;
+    const projectName = document.getElementById('bidProjectName').value.trim();
+    if (!projectName) {
+        toast('项目名称不能为空', 'error');
+        return;
+    }
+    // 中标金额：直接存储万元值
+    const amountStr = document.getElementById('bidAmount').value.trim();
+    const bidAmount = amountStr ? parseFloat(amountStr) : null;
+    const ctrlPriceStr = document.getElementById('bidControlPrice').value.trim();
+    const controlPrice = ctrlPriceStr ? parseFloat(ctrlPriceStr) : null;
+
+    const payload = {
+        project_name: projectName,
+        category: document.getElementById('bidCategory').value,
+        province: document.getElementById('bidProvince').value.trim(),
+        city: document.getElementById('bidCity').value.trim(),
+        winner: document.getElementById('bidWinner').value.trim(),
+        consortium: document.getElementById('bidConsortium').value.trim(),
+        bid_amount: bidAmount,
+        bid_date: document.getElementById('bidDate').value,
+        is_opened: document.getElementById('bidIsOpened').value,
+        project_overview: document.getElementById('bidOverview').value.trim(),
+        bid_scope: document.getElementById('bidScope').value.trim(),
+        line_type: document.getElementById('bidLineType').value.trim(),
+        length_km: document.getElementById('bidLengthKm').value ? parseFloat(document.getElementById('bidLengthKm').value) : null,
+        total_stations: document.getElementById('bidTotalStations').value ? parseInt(document.getElementById('bidTotalStations').value) : null,
+        goa_level: document.getElementById('bidGoaLevel').value,
+        system_mode: document.getElementById('bidSystemMode').value.trim(),
+        control_price: controlPrice,
+        notes: document.getElementById('bidNotes').value.trim(),
+        bid_link: document.getElementById('bidLink').value.trim(),
+    };
+
+    try {
+        let res;
+        if (editId) {
+            res = await apiPut('/bid-records/' + editId, payload);
+        } else {
+            res = await apiPost('/bid-records', payload);
+        }
+        if (res.success) {
+            toast(res.message);
+            closeModal('bidModal');
+            loadBidRecords(bidCurrentPage);
+        } else {
+            toast(res.error || '保存失败', 'error');
+        }
+    } catch(e) {
+        toast('保存失败: ' + e.message, 'error');
+    }
+}
+
+async function viewBidDetail(recordId) {
+    bidDetailId = recordId;
+    try {
+        const res = await apiGet('/bid-records/' + recordId);
+        if (!res.success) throw new Error(res.error);
+        const d = res.data;
+        const amount = d.bid_amount ? formatMoney(d.bid_amount) + ' 万元' : '-';
+        const ctrl = d.control_price ? formatMoney(d.control_price) + ' 万元' : '-';
+        document.getElementById('bidDetailContent').innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 20px;font-size:14px">
+                <div><b>项目名称：</b>${escapeHtml(d.project_name || '-')}</div>
+                <div><b>工程分类：</b>${escapeHtml(d.category || '-')}</div>
+                <div><b>中标日期：</b>${d.bid_date || '-'}</div>
+                <div><b>省份：</b>${escapeHtml(d.province || '-')}</div>
+                <div><b>城市：</b>${escapeHtml(d.city || '-')}</div>
+                <div><b>中标单位：</b>${escapeHtml(d.winner || '-')}</div>
+                <div><b>联合体：</b>${escapeHtml(d.consortium || '-')}</div>
+                <div><b>中标金额：</b>${amount}</div>
+                <div><b>控制价：</b>${ctrl}</div>
+                <div><b>开通状态：</b>${escapeHtml(d.is_opened || '-')}</div>
+                <div><b>线路类型：</b>${escapeHtml(d.line_type || '-')}</div>
+                <div><b>线路长度：</b>${d.length_km ? d.length_km + ' km' : '-'}</div>
+                <div><b>站点数：</b>${d.total_stations || '-'}</div>
+                <div><b>GOA等级：</b>${escapeHtml(d.goa_level || '-')}</div>
+                <div><b>制式模式：</b>${escapeHtml(d.system_mode || '-')}</div>
+            </div>
+            <div style="margin-top:16px;font-size:14px">
+                <div style="margin-bottom:8px"><b>项目概况：</b>${escapeHtml(d.project_overview || '-')}</div>
+                <div style="margin-bottom:8px"><b>招标范围：</b>${escapeHtml(d.bid_scope || '-')}</div>
+                <div style="margin-bottom:8px"><b>备注：</b>${escapeHtml(d.notes || '-')}</div>
+                ${d.bid_link ? `<div><b>招标链接：</b><a href="${escapeHtml(d.bid_link)}" target="_blank" style="color:var(--primary)">${escapeHtml(d.bid_link)}</a></div>` : ''}
+            </div>
+            <div style="margin-top:12px;font-size:12px;color:var(--text-secondary)">数据来源: ${escapeHtml(d.data_source || 'manual')} | 创建时间: ${d.created_at || '-'} | record_id: ${d.record_id}</div>
+        `;
+        document.getElementById('bidDetailModal').classList.add('active');
+    } catch(e) {
+        toast('加载详情失败: ' + e.message, 'error');
+    }
+}
+
+async function deleteBidRecord(recordId) {
+    if (!confirm('确定删除此中标记录？此操作不可恢复。')) return;
+    try {
+        const res = await apiDelete('/bid-records/' + recordId);
+        if (res.success) {
+            toast(res.message);
+            loadBidRecords(bidCurrentPage);
+            // 如果详情面板打开则关闭
+            closeModal('bidDetailModal');
+        } else {
+            toast(res.error || '删除失败', 'error');
+        }
+    } catch(e) {
+        toast('删除失败: ' + e.message, 'error');
+    }
+}
+
+function editBidFromDetail() {
+    closeModal('bidDetailModal');
+    editBidRecord(bidDetailId);
+}
+
+function deleteBidFromDetail() {
+    deleteBidRecord(bidDetailId);
+}
+
+async function importBidRecords() {
+    document.getElementById('bidImportStatus').textContent = '正在导入...';
+    try {
+        const res = await apiPost('/bid-records/import', {});
+        if (res.success) {
+            const d = res.data;
+            const msg = `导入完成: 总计 ${d.total_read} 条, 新增 ${d.new_count} 条, 更新 ${d.updated_count} 条, 重复跳过 ${d.duplicate_count} 条`;
+            document.getElementById('bidImportStatus').textContent = msg;
+            toast(msg);
+            loadBidRecords(1);
+        } else {
+            document.getElementById('bidImportStatus').textContent = '导入失败';
+            toast('导入失败: ' + (res.error || ''), 'error');
+        }
+    } catch(e) {
+        document.getElementById('bidImportStatus').textContent = '导入异常';
+        toast('导入异常: ' + e.message, 'error');
+    }
+}
+
+// ===== 导出Excel =====
+async function exportBidExcel() {
+    toast('正在生成Excel...', 'info');
+    try {
+        const catsParam = selectedCategories.join(',');
+        const prov = document.getElementById('bidFilterProvince').value;
+        const city = document.getElementById('bidFilterCity').value;
+        const dateFrom = document.getElementById('bidFilterDateFrom').value;
+        const dateTo = document.getElementById('bidFilterDateTo').value;
+        const keyword = document.getElementById('bidFilterKeyword').value;
+
+        let url = '/bid-records/export?';
+        if (catsParam) url += `categories=${encodeURIComponent(catsParam)}&`;
+        if (prov) url += `province=${encodeURIComponent(prov)}&`;
+        if (city) url += `city=${encodeURIComponent(city)}&`;
+        if (dateFrom) url += `date_from=${dateFrom}-01&`;
+        if (dateTo) url += `date_to=${dateTo}-31&`;
+        if (keyword) url += `keyword=${encodeURIComponent(keyword)}&`;
+
+        const resp = await fetch(API + url);
+        if (!resp.ok) throw new Error('导出失败');
+        const blob = await resp.blob();
+        const a = document.createElement('a');
+        a.href = window.URL.createObjectURL(blob);
+        a.download = '中标记录_' + new Date().toISOString().slice(0,10) + '.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(a.href);
+        toast('Excel导出成功');
+    } catch(e) {
+        toast('导出失败: ' + e.message, 'error');
+    }
+}
+
+// ===== 导出模版下载 =====
+async function downloadImportTemplate() {
+    try {
+        const resp = await fetch(API + '/bid-records/import-template');
+        if (!resp.ok) throw new Error('下载模版失败');
+        const blob = await resp.blob();
+        const a = document.createElement('a');
+        a.href = window.URL.createObjectURL(blob);
+        a.download = '中标记录导出模版.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(a.href);
+        toast('模版下载成功');
+    } catch(e) {
+        toast('下载模版失败: ' + e.message, 'error');
+    }
+}
+
+// ===== 从Excel导入（两步确认：先检查重复，再导入） =====
+let _importFile = null;  // 缓存已选文件
+
+function showImportModal() {
+    document.getElementById('importFileInput').value = '';
+    document.getElementById('importProgress').textContent = '';
+    document.getElementById('importCheckResult').style.display = 'none';
+    document.getElementById('importCheckResult').innerHTML = '';
+    document.getElementById('importModalFooter').innerHTML = `
+        <button class="btn btn-outline" onclick="closeModal('importModal')">取消</button>
+        <button class="btn btn-primary" id="btnImportCheck" onclick="doImportCheck()">下一步：检查重复</button>
+    `;
+    _importFile = null;
+    document.getElementById('importModal').classList.add('active');
+}
+
+async function doImportCheck() {
+    const fileInput = document.getElementById('importFileInput');
+    const file = fileInput.files[0];
+    if (!file) { toast('请先选择Excel文件', 'error'); return; }
+    _importFile = file;
+
+    const btn = document.getElementById('btnImportCheck');
+    btn.disabled = true;
+    btn.textContent = '⏳ 正在检查...';
+    document.getElementById('importProgress').textContent = '正在解析文件并检查重复...';
+
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const resp = await fetch(API + '/bid-records/import-check', {
+            method: 'POST', body: formData
+        });
+        const res = await resp.json();
+        if (res.success) {
+            showCheckResult(res.data);
+        } else {
+            document.getElementById('importProgress').textContent = '检查失败: ' + (res.error || '');
+            toast('检查失败: ' + (res.error || ''), 'error');
+        }
+    } catch(e) {
+        document.getElementById('importProgress').textContent = '检查异常';
+        toast('检查异常: ' + e.message, 'error');
+    }
+    btn.disabled = false;
+    btn.textContent = '下一步：检查重复';
+}
+
+function showCheckResult(data) {
+    const resultEl = document.getElementById('importCheckResult');
+    const progressEl = document.getElementById('importProgress');
+    const footerEl = document.getElementById('importModalFooter');
+
+    resultEl.style.display = 'block';
+    const d = data;
+    const hasDups = d.duplicate_count > 0;
+
+    let html = `<div style="font-size:14px"><b>📊 检查结果</b></div>`;
+    html += `<div style="font-size:13px;margin-top:4px;color:var(--text-secondary)">
+        总计 ${d.total_read} 条数据，其中 <span style="color:#52c41a">新增 ${d.new_count} 条</span>`;
+
+    if (hasDups) {
+        html += `，<span style="color:#faad14">重复 ${d.duplicate_count} 条</span>`;
+        html += `</div>`;
+        html += `<div style="margin-top:8px;max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;">`;
+        html += `<table style="width:100%;font-size:12px;border-collapse:collapse">`;
+        html += `<tr style="background:var(--bg-secondary);text-align:left">
+            <th style="padding:4px 8px">项目名称</th>
+            <th style="padding:4px 8px">日期</th>
+            <th style="padding:4px 8px">已有单位/城市</th></tr>`;
+        for (const dup of d.duplicates) {
+            html += `<tr style="border-top:1px solid var(--border)">
+                <td style="padding:4px 8px">${escHtml(dup.project_name || '').substring(0,40)}</td>
+                <td style="padding:4px 8px">${dup.bid_date || ''}</td>
+                <td style="padding:4px 8px;color:var(--text-secondary)">${(dup.existing_winner||'')}/${(dup.existing_city||'')}</td></tr>`;
+        }
+        html += `</table></div>`;
+    } else {
+        html += `</div><div style="margin-top:8px;color:#52c41a">✅ 未发现重复数据，可以直接导入</div>`;
+    }
+
+    resultEl.innerHTML = html;
+    progressEl.textContent = '';
+
+    // 更新底部按钮
+    if (hasDups) {
+        footerEl.innerHTML = `
+            <button class="btn btn-outline" onclick="closeModal('importModal')">取消</button>
+            <button class="btn btn-outline" onclick="doImportWithAction('skip')">跳过重复（仅导入${d.new_count}条新数据）</button>
+            <button class="btn btn-primary" onclick="doImportWithAction('all')">全部导入（覆盖${d.duplicate_count}条重复）</button>
+        `;
+    } else {
+        footerEl.innerHTML = `
+            <button class="btn btn-outline" onclick="closeModal('importModal')">取消</button>
+            <button class="btn btn-primary" onclick="doImportWithAction('all')">确认导入（${d.new_count}条）</button>
+        `;
+    }
+}
+
+async function doImportWithAction(action) {
+    if (!_importFile) { toast('文件已丢失，请重新选择', 'error'); return; }
+
+    const footerEl = document.getElementById('importModalFooter');
+    footerEl.innerHTML = `<span style="color:var(--text-secondary);padding:8px">⏳ 正在导入...</span>`;
+    document.getElementById('importProgress').textContent = '正在导入数据...';
+
+    try {
+        const formData = new FormData();
+        formData.append('file', _importFile);
+        const resp = await fetch(API + '/bid-records/import-upload?duplicate_action=' + action, {
+            method: 'POST', body: formData
+        });
+        const res = await resp.json();
+        if (res.success) {
+            const d = res.data;
+            const msg = `导入完成: 总计 ${d.total_read} 条, 新增 ${d.new_count||d.inserted||0} 条, 更新 ${d.updated_count||0} 条`;
+            document.getElementById('importProgress').textContent = msg;
+            toast(msg);
+            closeModal('importModal');
+            loadBidRecords(1);
+        } else {
+            document.getElementById('importProgress').textContent = '导入失败: ' + (res.error || '');
+            toast('导入失败: ' + (res.error || ''), 'error');
+        }
+    } catch(e) {
+        document.getElementById('importProgress').textContent = '导入异常';
+        toast('导入异常: ' + e.message, 'error');
+    }
+}
+
+// HTML转义辅助函数
+function escHtml(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ===== 金额补全：搜索全网数据填充空缺金额 =====
+async function fillMissingAmounts() {
+    const btn = document.getElementById('btnFillAmounts');
+    const statusEl = document.getElementById('bidImportStatus');
+    btn.disabled = true;
+    btn.textContent = '⏳ 正在搜索...';
+    statusEl.textContent = '正在预览空缺记录...';
+
+    try {
+        // 第一步：预览空缺记录
+        const previewResp = await fetch(API + '/bid-records/fill-amounts/preview', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        });
+        const previewRes = await previewResp.json();
+        if (!previewRes.success) throw new Error(previewRes.error);
+
+        const preview = previewRes.data;
+        if (preview.total_missing === 0) {
+            toast('所有记录金额已完整，无需补全 ✓');
+            statusEl.textContent = '金额数据完整';
+            btn.disabled = false;
+            btn.textContent = '🔍 补全金额';
+            return;
+        }
+
+        const confirmed = confirm(
+            `发现 ${preview.total_missing} 条记录存在金额空缺：\n` +
+            `  - 缺中标金额: ${preview.missing_amount} 条\n` +
+            `  - 缺控制价: ${preview.missing_control} 条\n\n` +
+            `是否开始搜索全网数据来补全？\n（每条记录约需3-5秒，共需约${preview.total_missing * 4}秒）`
+        );
+        if (!confirmed) {
+            statusEl.textContent = '已取消补全';
+            btn.disabled = false;
+            btn.textContent = '🔍 补全金额';
+            return;
+        }
+
+        // 第二步：执行补全
+        statusEl.textContent = '正在搜索并补全金额...';
+        btn.textContent = '⏳ 搜索中...';
+
+        const fillResp = await fetch(API + '/bid-records/fill-amounts', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({max_records: Math.min(preview.total_missing, 20)})
+        });
+        const fillRes = await fillResp.json();
+        if (!fillRes.success) throw new Error(fillRes.error);
+
+        const d = fillRes.data;
+        if (d.status === 'running') {
+            statusEl.textContent = d.message;
+            toast(d.message);
+        } else {
+            const msg = `补全完成：处理 ${d.total_processed} 条，中标金额补全 ${d.filled_amount} 条，控制价补全 ${d.filled_control} 条，跳过 ${d.skipped} 条`;
+            statusEl.textContent = msg;
+            toast(msg);
+
+            // 显示详细结果
+            if (d.details && d.details.length > 0) {
+                const resultLines = d.details
+                    .filter(item => item.new_bid_amount || item.new_control_price)
+                    .map(item => {
+                        const parts = [];
+                        if (item.new_bid_amount) parts.push(`中标金额: ${item.new_bid_amount}万元`);
+                        if (item.new_control_price) parts.push(`控制价: ${item.new_control_price}万元`);
+                        return `· ${item.project_name.substring(0, 25)}... ${parts.join(', ')}`;
+                    });
+                if (resultLines.length > 0) {
+                    setTimeout(() => {
+                        alert('补全详情：\n\n' + resultLines.join('\n'));
+                    }, 500);
+                }
+            }
+
+            loadBidRecords(1);
+        }
+    } catch(e) {
+        toast('补全失败: ' + e.message, 'error');
+        statusEl.textContent = '补全失败';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🔍 补全金额';
+    }
+}
+
+async function fillSingleAmount(recordId) {
+    const statusEl = document.getElementById('bidImportStatus');
+    statusEl.textContent = '正在搜索 ' + recordId + '...';
+    try {
+        const resp = await fetch(API + '/bid-records/fill-amounts/' + recordId, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        });
+        const res = await resp.json();
+        if (res.success) {
+            const d = res.data;
+            if (d.found) {
+                const parts = [];
+                if (d.new_bid_amount) parts.push(`中标金额: ${d.new_bid_amount}万元`);
+                if (d.new_control_price) parts.push(`控制价: ${d.new_control_price}万元`);
+                toast('已补全: ' + parts.join(', '));
+                loadBidRecords(1);
+            } else {
+                toast('未找到该记录的金额信息');
+            }
+        } else {
+            toast('补全失败: ' + (res.error || ''), 'error');
+        }
+    } catch(e) {
+        toast('补全异常: ' + e.message, 'error');
+    }
+    statusEl.textContent = '';
+}
+
+// apiPut 和 apiDelete 工具函数
+async function apiPut(path, data) {
+    const resp = await fetch(API + path, {
+        method: 'PUT', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    });
+    return resp.json();
+}
+async function apiDelete(path) {
+    const resp = await fetch(API + path, {
+        method: 'DELETE'
+    });
+    return resp.json();
+}
 
 // 初始加载
 loadDashboard();

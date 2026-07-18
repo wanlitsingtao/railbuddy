@@ -62,6 +62,7 @@ class RailBuddyApp:
         self.fetcher_manager = FetcherManager(
             sources_config=self.config.sources,
             wechat_sources_config=self.config.wechat_sources,
+            weibo_sources_config=self.config.weibo_sources,
             max_items_per_source=self.config.max_items_per_source,
             max_age_days=self.config.max_age_days
         )

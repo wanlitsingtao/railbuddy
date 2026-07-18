@@ -4,3 +4,4 @@ lxml>=4.9.0
 apscheduler>=3.10.0
 pyyaml>=6.0
 flask>=3.0.0
+openpyxl>=3.1.0

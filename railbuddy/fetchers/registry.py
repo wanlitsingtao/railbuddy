@@ -7,11 +7,13 @@ from datetime import datetime, timedelta
 from .base import BaseFetcher
 from .website import WebsiteFetcher
 from .wechat import WechatFetcher
+from .weibo import WeiboFetcher
 from .api import ApiFetcher
 from .wikipedia import WikipediaFetcher
 from .mot import MOTFetcher
 from ..models import BidItem, TransitMileage
 from ..database import Database
+from ..utils.filters import filter_rail_transit_items
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +21,7 @@ logger = logging.getLogger(__name__)
 FETCHER_TYPES = {
     "website": WebsiteFetcher,
     "wechat": WechatFetcher,
+    "weibo": WeiboFetcher,
     "api": ApiFetcher,
     "wikipedia": WikipediaFetcher,
     "mot": MOTFetcher,
@@ -36,6 +39,7 @@ class FetcherManager:
 
     def __init__(self, sources_config: List[Dict],
                  wechat_sources_config: List[Dict],
+                 weibo_sources_config: Optional[List[Dict]] = None,
                  max_items_per_source: int = 100,
                  max_age_days: int = 0):
         self.fetchers: List[BaseFetcher] = []
@@ -49,6 +53,11 @@ class FetcherManager:
         # 初始化公众号抓取器
         for cfg in wechat_sources_config:
             self._add_fetcher(cfg)
+
+        # 初始化微博抓取器
+        if weibo_sources_config:
+            for cfg in weibo_sources_config:
+                self._add_fetcher(cfg)
 
         logger.info(f"抓取器管理器初始化完成，共 {len(self.fetchers)} 个数据源")
 
@@ -109,6 +118,14 @@ class FetcherManager:
                     )
                     items = items[:self.max_items_per_source]
 
+                # 轨交内容过滤（丢弃非城市轨道交通相关条目）
+                items, filtered_out = filter_rail_transit_items(items)
+                if filtered_out:
+                    logger.info(
+                        f"[{fetcher.name}] 轨交过滤: 保留 {len(items)} 条, "
+                        f"丢弃 {len(filtered_out)} 条非轨交内容"
+                    )
+
                 # 去重 + 保存
                 new_count = 0
                 for item in items:
@@ -139,6 +156,20 @@ class FetcherManager:
         if all_mileage:
             saved = db.save_mileage_batch(all_mileage)
             logger.info(f"里程数据批量保存: {saved}/{len(all_mileage)} 条")
+
+        # 自动转存：从中标公告 items 中提取信息写入 bid_records
+        if all_new_items:
+            try:
+                from ..data.auto_transfer import AutoTransfer
+                transfer = AutoTransfer(db)
+                t_result = transfer.transfer(all_new_items)
+                if t_result["transferred"] > 0:
+                    logger.info(
+                        f"自动转存: {t_result['transferred']} 条中标记录入库, "
+                        f"分类: {t_result['categories']}"
+                    )
+            except Exception as e:
+                logger.warning(f"自动转存异常（不影响主流程）: {e}")
 
         logger.info(f"全部源抓取完成，共新增 {len(all_new_items)} 条未发送条目")
         return all_new_items

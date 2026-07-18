@@ -49,6 +49,8 @@ sources:
   - 有轨电车
   - 交通枢纽
   - 城轨
+  - 城际铁路
+  - 城际
   max_pages: 10
   method: POST
   name: 深圳公共资源交易中心
@@ -99,6 +101,7 @@ sources:
   - 轨道
   - 地铁
   - 城轨
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -119,6 +122,7 @@ sources:
   - 地铁
   - 城轨
   - 公告
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -185,6 +189,7 @@ sources:
   - 询比
   - 轨道
   - 地铁
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -207,6 +212,7 @@ sources:
   - 铁路
   - 轨道
   - 地铁
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -228,6 +234,7 @@ sources:
   - 公告
   - 地铁
   - 轨道
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -249,6 +256,7 @@ sources:
   - 公告
   - 地铁
   - 轨道
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -271,6 +279,7 @@ sources:
   - 公告
   - 轨道
   - 地铁
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -290,6 +299,7 @@ sources:
   - 轨道
   - 地铁
   - 公告
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -311,6 +321,7 @@ sources:
   - 公告
   - 轨道
   - 地铁
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -332,6 +343,7 @@ sources:
   - 公告
   - 轨道
   - 地铁
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -353,6 +365,7 @@ sources:
   - 公告
   - 轨道
   - 地铁
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -377,6 +390,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -410,6 +424,7 @@ sources:
   - 建设
   - 改造
   - 总承包
+  - 城际
   fetch_detail: false
   timeout: 15
   request_interval: 2
@@ -433,6 +448,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -457,6 +473,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -476,6 +493,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
 - name: 长春公共资源交易中心
   type: api
   enabled: true
@@ -483,11 +501,11 @@ sources:
   method: POST
   content_type: form
   body_template:
-    categorynum: "002002001"
-    xiaqucode: "220101"
-    jyfl: "全部"
+    categorynum: '002002001'
+    xiaqucode: '220101'
+    jyfl: 全部
     pageSize: 15
-    siteguid: "7eb5f7f1-9041-43ad-8e13-8fcb82ea831a"
+    siteguid: 7eb5f7f1-9041-43ad-8e13-8fcb82ea831a
   page_param: pageIndex
   page_base: 1
   page_size: 15
@@ -498,7 +516,7 @@ sources:
   date_field: infodate
   url_field: href
   link_prefix: https://www.ccggzy.com.cn
-  since_param: ""
+  since_param: ''
   verify_ssl: false
   timeout: 15
   request_interval: 2
@@ -520,6 +538,7 @@ sources:
   - 建设
   - 改造
   - 总承包
+  - 城际
 - name: 哈尔滨公共资源交易中心
   type: website
   enabled: true
@@ -540,6 +559,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -564,6 +584,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -588,6 +609,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -613,6 +635,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -637,6 +660,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -661,6 +685,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -685,13 +710,14 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
 - name: 福州公共资源交易中心
   type: website
-  enabled: false  # Vue SPA，无法通过curl抓取。需要F12浏览器抓包找API端点
+  enabled: false
   url: https://fzztb.fzsggzyjyfwzx.cn/
   list_selector: ul li
   title_selector: a
@@ -709,6 +735,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -731,7 +758,7 @@ sources:
   date_field: bulletinissuetime
   id_field: guid
   detail_url_template: https://ggzy.yn.gov.cn/tradeHall/tradeDetail?guid={content_id}
-  since_param: ""
+  since_param: ''
   verify_ssl: false
   timeout: 15
   request_interval: 2
@@ -753,10 +780,8 @@ sources:
   - 建设
   - 改造
   - 总承包
+  - 城际
   detail_content_selector: .content, .article-content
-  timeout: 15
-  request_interval: 2
-  verify_ssl: false
 - name: 无锡公共资源交易中心
   type: website
   enabled: false
@@ -777,6 +802,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -801,6 +827,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -825,6 +852,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -849,6 +877,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -873,6 +902,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -897,6 +927,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -921,6 +952,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -945,6 +977,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -969,6 +1002,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -993,6 +1027,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -1017,6 +1052,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -1041,6 +1077,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -1065,6 +1102,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -1089,6 +1127,7 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
@@ -1113,11 +1152,411 @@ sources:
   - 城轨
   - 铁路
   - 交通
+  - 城际
   fetch_detail: false
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
-# ===== 里程统计与行业报告数据源 =====
+- name: 中国招标投标公共服务平台-中标结果公示
+  type: website
+  enabled: true
+  url_template: https://bulletin.cebpubservice.com/xxfbcmses/search/bulletin.html?searchDate=1997-10-26&dates=300&word=%E5%9F%8E%E5%B8%82%E8%BD%A8%E9%81%93%E4%BA%A4%E9%80%9A&categoryId=90&industryName=&area=&status=&publishMedia=&sourceInfo=&showStatus=1&page={page}
+  list_selector: table.table_text tr
+  title_selector: td:nth-child(1) a
+  link_selector: td:nth-child(1) a
+  date_selector: td:nth-child(5)
+  link_format: javascript_urlopen
+  link_prefix: https://ctbpsp.com/#/bulletinDetail?uuid=
+  max_pages: 5
+  keywords:
+  - 城市轨道交通
+  - 地铁
+  - 城轨
+  - 轨道交通
+  - 轻轨
+  - 有轨电车
+  - 市域铁路
+  - 铁路
+  - 交通
+  - 信号
+  - 通信
+  - 综合监控
+  - 安防
+  - 弱电
+  - 消防
+  - 供电
+  - 机电
+  - 车辆
+  - 施工
+  - 设计
+  - 监理
+  - 总承包
+  - 城际
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 中国招标投标公共服务平台-中标候选人公示
+  type: website
+  enabled: true
+  url_template: https://bulletin.cebpubservice.com/xxfbcmses/search/bulletin.html?searchDate=1997-10-26&dates=300&word=%E5%9F%8E%E5%B8%82%E8%BD%A8%E9%81%93%E4%BA%A4%E9%80%9A&categoryId=91&industryName=&area=&status=&publishMedia=&sourceInfo=&showStatus=1&page={page}
+  list_selector: table.table_text tr
+  title_selector: td:nth-child(1) a
+  link_selector: td:nth-child(1) a
+  date_selector: td:nth-child(5)
+  link_format: javascript_urlopen
+  link_prefix: https://ctbpsp.com/#/bulletinDetail?uuid=
+  max_pages: 5
+  keywords:
+  - 城市轨道交通
+  - 地铁
+  - 城轨
+  - 轨道交通
+  - 轻轨
+  - 有轨电车
+  - 市域铁路
+  - 铁路
+  - 交通
+  - 信号
+  - 通信
+  - 综合监控
+  - 安防
+  - 弱电
+  - 消防
+  - 供电
+  - 机电
+  - 车辆
+  - 施工
+  - 设计
+  - 监理
+  - 总承包
+  - 城际
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 中国招标投标公共服务平台-招标公告
+  type: website
+  enabled: true
+  url_template: https://bulletin.cebpubservice.com/xxfbcmses/search/bulletin.html?searchDate=1997-10-26&dates=300&word=%E5%9F%8E%E5%B8%82%E8%BD%A8%E9%81%93%E4%BA%A4%E9%80%9A&categoryId=88&industryName=&area=&status=&publishMedia=&sourceInfo=&showStatus=1&page={page}
+  list_selector: table.table_text tr
+  title_selector: td:nth-child(1) a
+  link_selector: td:nth-child(1) a
+  date_selector: td:nth-child(5)
+  link_format: javascript_urlopen
+  link_prefix: https://ctbpsp.com/#/bulletinDetail?uuid=
+  max_pages: 5
+  keywords:
+  - 城市轨道交通
+  - 地铁
+  - 城轨
+  - 轨道交通
+  - 轻轨
+  - 有轨电车
+  - 市域铁路
+  - 铁路
+  - 交通
+  - 信号
+  - 通信
+  - 综合监控
+  - 安防
+  - 弱电
+  - 消防
+  - 供电
+  - 机电
+  - 车辆
+  - 施工
+  - 设计
+  - 监理
+  - 总承包
+  - 城际
+  fetch_detail: false
+  detail_content_selector: .content, .article-content
+  timeout: 15
+  request_interval: 2
+- name: 巨潮资讯网-轨道交通中标公告
+  type: api
+  enabled: true
+  method: POST
+  api_url: http://www.cninfo.com.cn/new/fulltextSearch/full
+  content_type: form
+  extra_headers:
+    Referer: https://www.cninfo.com.cn/new/commonUrl/pageOfSearch?url=disclosure/list/search
+  body_template:
+    searchkey: 轨道交通 中标公告
+    pageNum: 1
+    pageSize: 30
+    sortName: pubdate
+    sortType: desc
+  page_param: pageNum
+  page_base: 1
+  max_pages: 5
+  page_size: 30
+  data_path: announcements
+  title_field: announcementTitle
+  date_field: announcementTime
+  id_field: announcementId
+  detail_url_template: https://www.cninfo.com.cn/new/disclosure/detail?announcementId={content_id}
+  keywords:
+  - 轨道交通
+  - 地铁
+  - 城轨
+  - 铁路
+  - 信号系统
+  - 通信系统
+  - 综合监控
+  - 安防
+  - 供电
+  - 机电
+  - 车辆
+  - 施工总承包
+  - 工程
+  - 设备采购
+  - 更新改造
+  - 城际
+  timeout: 15
+  request_interval: 3
+- name: 巨潮资讯网-城轨招标
+  type: api
+  enabled: true
+  method: POST
+  api_url: http://www.cninfo.com.cn/new/fulltextSearch/full
+  content_type: form
+  extra_headers:
+    Referer: https://www.cninfo.com.cn/new/commonUrl/pageOfSearch?url=disclosure/list/search
+  body_template:
+    searchkey: 城市轨道交通 招标
+    pageNum: 1
+    pageSize: 30
+    sortName: pubdate
+    sortType: desc
+  page_param: pageNum
+  page_base: 1
+  max_pages: 5
+  page_size: 30
+  data_path: announcements
+  title_field: announcementTitle
+  date_field: announcementTime
+  id_field: announcementId
+  detail_url_template: https://www.cninfo.com.cn/new/disclosure/detail?announcementId={content_id}
+  keywords:
+  - 轨道交通
+  - 地铁
+  - 城轨
+  - 铁路
+  - 信号系统
+  - 通信系统
+  - 综合监控
+  - 安防
+  - 供电
+  - 机电
+  - 车辆
+  - 施工总承包
+  - 工程
+  - 设备采购
+  - 更新改造
+  - 新线建设
+  - 开通运营
+  - 城际
+  timeout: 15
+  request_interval: 3
+- name: 巨潮资讯网-铁路城轨工程
+  type: api
+  enabled: true
+  method: POST
+  api_url: http://www.cninfo.com.cn/new/fulltextSearch/full
+  content_type: form
+  extra_headers:
+    Referer: https://www.cninfo.com.cn/new/commonUrl/pageOfSearch?url=disclosure/list/search
+  body_template:
+    searchkey: 铁路 城轨 工程 中标
+    pageNum: 1
+    pageSize: 30
+    sortName: pubdate
+    sortType: desc
+  page_param: pageNum
+  page_base: 1
+  max_pages: 5
+  page_size: 30
+  data_path: announcements
+  title_field: announcementTitle
+  date_field: announcementTime
+  id_field: announcementId
+  detail_url_template: https://www.cninfo.com.cn/new/disclosure/detail?announcementId={content_id}
+  keywords:
+  - 轨道交通
+  - 地铁
+  - 城轨
+  - 铁路
+  - 信号系统
+  - 通信系统
+  - 综合监控
+  - 安防
+  - 供电
+  - 机电
+  - 车辆
+  - 施工总承包
+  - 工程
+  - 设备采购
+  - 更新改造
+  - 新建
+  - 扩建
+  - 城际
+  timeout: 15
+  request_interval: 3
+- name: 搜狐新闻-城轨搜索
+  type: website
+  enabled: true
+  url: https://search.sohu.com/?keyword=%E5%9F%8E%E5%B8%82%E8%BD%A8%E9%81%93%E4%BA%A4%E9%80%9A+%E4%B8%AD%E6%A0%87+%E6%8B%9B%E6%A0%87&type=news
+  list_selector: div.search-list div.item, ul.search-list li, div.list-item
+  title_selector: a, h4 a
+  link_selector: a
+  date_selector: span.time, .date, .source-time
+  link_prefix: ''
+  keywords:
+  - 城市轨道交通
+  - 地铁
+  - 城轨
+  - 铁路
+  - 交通
+  - 招标
+  - 中标
+  - 采购
+  - 开通
+  - 运营
+  - 城际
+  fetch_detail: false
+  detail_content_selector: .article, .content,
+  timeout: 15
+  request_interval: 3
+- name: 搜狐新闻-轨道交通产业
+  type: website
+  enabled: false
+  url: https://search.sohu.com/?keyword=%E8%BD%A8%E9%81%93%E4%BA%A4%E9%80%9A+%E4%BF%A1%E5%8F%B7+%E9%80%9A%E4%BF%A1+%E7%9B%91%E6%8E%A7&type=news
+  list_selector: div.search-list div.item, ul.search-list li, div.list-item
+  title_selector: a, h4 a
+  link_selector: a
+  date_selector: span.time, .date, .source-time
+  link_prefix: ''
+  keywords:
+  - 信号
+  - 通信
+  - 监控
+  - 安防
+  - 中标
+  - 采购
+  - 轨道交通
+  - 地铁
+  - 城轨
+  - 城际
+  fetch_detail: false
+  detail_content_selector: .article, .content,
+  timeout: 15
+  request_interval: 3
+- name: 新浪财经-城轨中标
+  type: api
+  enabled: true
+  method: GET
+  api_url: https://search.sina.com.cn/api/search
+  body_template:
+    q: 轨道交通 中标公告 项目
+    c: news
+    range: all
+    size: 20
+  page_param: page
+  page_base: 1
+  max_pages: 5
+  page_size: 20
+  data_path: data.list
+  title_field: title
+  date_field: ctime
+  url_field: url
+  keywords:
+  - 轨道交通
+  - 地铁
+  - 城轨
+  - 铁路
+  - 信号系统
+  - 通信系统
+  - 综合监控
+  - 安防系统
+  - 车辆段
+  - 供电系统
+  - 更新改造
+  - 市域铁路
+  - 设备采购
+  - 系统集成
+  - 城际
+  timeout: 15
+  request_interval: 3
+- name: 新浪财经-轨道交通信号中标
+  type: api
+  enabled: true
+  method: GET
+  api_url: https://search.sina.com.cn/api/search
+  body_template:
+    q: 轨道交通 信号系统 中标
+    c: news
+    range: all
+    size: 20
+  page_param: page
+  page_base: 1
+  max_pages: 5
+  page_size: 20
+  data_path: data.list
+  title_field: title
+  date_field: ctime
+  url_field: url
+  keywords:
+  - 信号系统
+  - 通信系统
+  - 轨道交通
+  - 地铁
+  - 城轨
+  - 铁路
+  - 系统集成
+  - 设备采购
+  - 更新改造
+  - 车地无线
+  - CBTC
+  - 列控系统
+  - 城际
+  timeout: 15
+  request_interval: 3
+- name: 新浪财经-城轨招标公告
+  type: api
+  enabled: true
+  method: GET
+  api_url: https://search.sina.com.cn/api/search
+  body_template:
+    q: 城市轨道交通 招标公告
+    c: news
+    range: all
+    size: 20
+  page_param: page
+  page_base: 1
+  max_pages: 5
+  page_size: 20
+  data_path: data.list
+  title_field: title
+  date_field: ctime
+  url_field: url
+  keywords:
+  - 轨道交通
+  - 地铁
+  - 城轨
+  - 铁路
+  - 信号系统
+  - 通信系统
+  - 综合监控
+  - 施工总承包
+  - 更新改造
+  - 市域铁路
+  - 开通运营
+  - 新线建设
+  - 城际
+  timeout: 15
+  request_interval: 3
 - name: 交通运输部城轨月报
   type: mot
   enabled: true
@@ -1127,13 +1566,12 @@ sources:
   - 城市轨道交通
   - 运营数据
   - 里程
+  - 城际
   timeout: 15
   request_interval: 3
 - name: 维基百科城轨里程
   type: wikipedia
   enabled: false
-  # 维基百科在中国大陆可能无法直接访问，可通过 base_url 配置镜像
-  # 镜像示例: https://www.jinzhao.wiki
   base_url: https://zh.wikipedia.org
   fetch_city_details: true
   max_cities: 0
@@ -1141,6 +1579,7 @@ sources:
   - 城市轨道交通
   - 地铁
   - 里程
+  - 城际
   timeout: 20
   request_interval: 3
 - name: 中国城轨协会行业统计
@@ -1158,6 +1597,7 @@ sources:
   - 报告
   - 年度
   - 里程
+  - 城际
   fetch_detail: false
   timeout: 15
   request_interval: 3
@@ -1252,6 +1692,259 @@ wechat_sources:
   keywords: *id001
   timeout: 15
   request_interval: 3
+weibo_sources:
+- name: 中国交通（交通运输部官方微博）
+  type: weibo
+  enabled: true
+  uid: 7073634525
+  max_pages: 3
+  keywords:
+  - 轨道
+  - 地铁
+  - 城轨
+  - 铁路
+  - 交通
+  - 项目
+  - 工程
+  - 招标
+  - 采购
+  - 中标
+  - 开通
+  - 运营
+  - 通车
+  - 信号
+  - 车辆
+  - 供电
+  - 机电
+  - 施工
+  timeout: 15
+  request_interval: 3
+- name: 交通发布（中国交通报）
+  type: weibo
+  enabled: true
+  uid: 3928511449
+  max_pages: 3
+  keywords:
+  - 轨道
+  - 地铁
+  - 城轨
+  - 铁路
+  - 交通
+  - 项目
+  - 工程
+  - 招标
+  - 采购
+  - 中标
+  - 开通
+  - 运营
+  - 通车
+  - 信号
+  - 车辆
+  - 供电
+  - 机电
+  - 施工
+  timeout: 15
+  request_interval: 3
+- name: 北京地铁
+  type: weibo
+  enabled: true
+  uid: 2778292197
+  max_pages: 2
+  keywords:
+  - 开通
+  - 运营
+  - 新线
+  - 中标
+  - 招标
+  - 采购
+  - 建设
+  - 施工
+  - 改造
+  - 信号
+  - 车辆
+  - 机电
+  timeout: 15
+  request_interval: 3
+- name: 上海地铁
+  type: weibo
+  enabled: true
+  domain: shmetro
+  max_pages: 2
+  keywords:
+  - 开通
+  - 运营
+  - 新线
+  - 中标
+  - 招标
+  - 采购
+  - 建设
+  - 施工
+  - 改造
+  - 信号
+  - 车辆
+  - 机电
+  timeout: 15
+  request_interval: 3
+- name: 广州地铁
+  type: weibo
+  enabled: true
+  uid: 2612249974
+  max_pages: 2
+  keywords:
+  - 开通
+  - 运营
+  - 新线
+  - 中标
+  - 招标
+  - 采购
+  - 建设
+  - 施工
+  - 改造
+  - 信号
+  - 车辆
+  - 机电
+  timeout: 15
+  request_interval: 3
+- name: 深圳地铁
+  type: weibo
+  enabled: true
+  uid: 2311331195
+  max_pages: 2
+  keywords:
+  - 开通
+  - 运营
+  - 新线
+  - 中标
+  - 招标
+  - 采购
+  - 建设
+  - 施工
+  - 改造
+  - 信号
+  - 车辆
+  - 机电
+  timeout: 15
+  request_interval: 3
+- name: 成都地铁运营
+  type: weibo
+  enabled: true
+  domain: cdmetroyy
+  max_pages: 2
+  keywords:
+  - 开通
+  - 运营
+  - 新线
+  - 中标
+  - 招标
+  - 采购
+  - 建设
+  - 施工
+  - 改造
+  - 信号
+  - 车辆
+  - 机电
+  timeout: 15
+  request_interval: 3
+- name: 重庆轨道交通
+  type: weibo
+  enabled: true
+  uid: 2152519810
+  max_pages: 2
+  keywords:
+  - 开通
+  - 运营
+  - 新线
+  - 中标
+  - 招标
+  - 采购
+  - 建设
+  - 施工
+  - 改造
+  - 信号
+  - 车辆
+  - 机电
+  timeout: 15
+  request_interval: 3
+- name: 武汉地铁运营
+  type: weibo
+  enabled: true
+  uid: 3186945861
+  max_pages: 2
+  keywords:
+  - 开通
+  - 运营
+  - 新线
+  - 中标
+  - 招标
+  - 采购
+  - 建设
+  - 施工
+  - 改造
+  - 信号
+  - 车辆
+  - 机电
+  timeout: 15
+  request_interval: 3
+- name: 南京地铁
+  type: weibo
+  enabled: true
+  uid: 2638276292
+  max_pages: 2
+  keywords:
+  - 开通
+  - 运营
+  - 新线
+  - 中标
+  - 招标
+  - 采购
+  - 建设
+  - 施工
+  - 改造
+  - 信号
+  - 车辆
+  - 机电
+  timeout: 15
+  request_interval: 3
+- name: 杭州地铁官方
+  type: weibo
+  enabled: true
+  uid: 2219143801
+  max_pages: 2
+  keywords:
+  - 开通
+  - 运营
+  - 新线
+  - 中标
+  - 招标
+  - 采购
+  - 建设
+  - 施工
+  - 改造
+  - 信号
+  - 车辆
+  - 机电
+  timeout: 15
+  request_interval: 3
+- name: 西安地铁
+  type: weibo
+  enabled: true
+  domain: xianditie
+  max_pages: 2
+  keywords:
+  - 开通
+  - 运营
+  - 新线
+  - 中标
+  - 招标
+  - 采购
+  - 建设
+  - 施工
+  - 改造
+  - 信号
+  - 车辆
+  - 机电
+  timeout: 15
+  request_interval: 3
 email:
   smtp_server: smtp.qq.com
   smtp_port: 465
@@ -1260,7 +1953,7 @@ email:
   password: ywpeqwzddfxsbjcf
   receiver: wanli_tsingtao@163.com
 schedule:
-  auto_send: true
+  auto_send: false
   fetch_on_start: true
   times:
   - 08:00
