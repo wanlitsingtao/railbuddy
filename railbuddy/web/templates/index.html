@@ -599,6 +599,7 @@
             <li data-page="wechat"><span class="icon">📱</span> 公众号数据源</li>
             <li data-page="items"><span class="icon">📋</span> 行业动态</li>
             <li data-page="bid"><span class="icon">🏆</span> 中标查询</li>
+            <li data-page="bid-dynamic"><span class="icon">📡</span> 中标动态</li>
             <li data-page="mileage"><span class="icon">📈</span> 里程统计</li>
             <li data-page="logs"><span class="icon">📧</span> 发送日志</li>
             <li data-page="email"><span class="icon">✉️</span> 邮箱设置</li>
@@ -717,7 +718,7 @@
             </div>
             <div class="stats-grid" id="bidStatsGrid" style="margin-bottom:20px">
                 <div class="stat-card">
-                    <div class="label">中标总金额（万元）</div>
+                    <div class="label">中标总金额（亿元）</div>
                     <div class="value warning" id="bidTotalAmount">0.00</div>
                 </div>
             </div>
@@ -759,6 +760,62 @@
             <div class="card">
                 <div id="bidRecordsTable" style="overflow-x:auto"><div class="loading">加载中...</div></div>
                 <div id="bidRecordsPagination" class="pagination"></div>
+            </div>
+        </div>
+
+        <!-- 中标动态 -->
+        <div class="page" id="page-bid-dynamic">
+            <div class="page-header">
+                <h2>中标动态</h2>
+                <div class="desc">从网上抓取的中标原始数据，审核后可提取到正式中标数据表</div>
+            </div>
+            <div class="stats-grid" id="bidDynamicStatsGrid" style="margin-bottom:20px">
+                <div class="stat-card">
+                    <div class="label">中标总金额（亿元）</div>
+                    <div class="value warning" id="bidDynamicTotalAmount">0.00</div>
+                </div>
+                <div class="stat-card">
+                    <div class="label">记录总数</div>
+                    <div class="value info" id="bidDynamicTotalCount">0</div>
+                </div>
+            </div>
+            <div class="filter-bar">
+                <div class="multi-select-wrap" id="bidDynamicCategoryWrap">
+                    <button class="multi-select-btn" id="bidDynamicCategoryBtn" onclick="toggleMultiSelect('bidDynamicCategoryDropdown')">选择分类</button>
+                    <div class="multi-select-dropdown" id="bidDynamicCategoryDropdown">
+                        <div class="multi-select-actions">
+                            <button onclick="selectAllDynamicCategories()">全选</button>
+                            <button onclick="clearAllDynamicCategories()">清空</button>
+                        </div>
+                        <div id="bidDynamicCategoryOptions"></div>
+                    </div>
+                </div>
+                <select id="bidDynamicFilterProvince" onchange="loadBidDynamic(1)"><option value="">全部省份</option></select>
+                <select id="bidDynamicFilterCity" onchange="loadBidDynamic(1)"><option value="">全部城市</option></select>
+                <div class="date-range-wrap">
+                    <span class="date-label">中标月份</span>
+                    <input type="month" id="bidDynamicFilterDateFrom" onchange="loadBidDynamic(1)">
+                    <span class="date-sep">~</span>
+                    <input type="month" id="bidDynamicFilterDateTo" onchange="loadBidDynamic(1)">
+                </div>
+                <div class="search-input-wrap">
+                    <input type="text" id="bidDynamicFilterKeyword" placeholder="搜索项目名称/中标单位/备注..." autocomplete="off" onkeydown="if(event.key==='Enter'){loadBidDynamic(1)}">
+                    <span class="search-clear" id="bidDynamicSearchClear" onclick="clearBidDynamicSearch()">&times;</span>
+                </div>
+                <button class="btn btn-outline btn-sm" onclick="loadBidDynamic(1)">搜索</button>
+                <button class="btn btn-outline btn-sm" onclick="clearBidDynamicFilters()">清除筛选</button>
+            </div>
+            <div class="action-bar">
+                <button class="btn btn-primary btn-sm" onclick="openBidDynamicModal()">+ 新增中标动态</button>
+                <button class="btn btn-success btn-sm" onclick="transferSelectedBidDynamic()">📤 提取选中到中标数据表</button>
+                <button class="btn btn-outline btn-sm" onclick="toggleSelectAllDynamic()">全选/取消全选</button>
+                <span id="bidDynamicSelectedCount" style="font-size:13px;color:var(--text-secondary);margin-left:8px"></span>
+                <button class="btn btn-outline btn-sm" onclick="loadBidDynamic()">🔁 刷新</button>
+                <span id="bidDynamicTransferStatus" style="font-size:13px;color:var(--text-secondary);margin-left:8px"></span>
+            </div>
+            <div class="card">
+                <div id="bidDynamicTable" style="overflow-x:auto"><div class="loading">加载中...</div></div>
+                <div id="bidDynamicPagination" class="pagination"></div>
             </div>
         </div>
 
@@ -1281,6 +1338,198 @@
     </div>
 </div>
 
+<!-- 中标动态编辑模态框 -->
+<div class="modal-overlay" id="bidDynamicModal">
+    <div class="modal" style="width:900px">
+        <div class="modal-header">
+            <h3 id="bidDynamicModalTitle">新增中标动态</h3>
+            <span class="modal-close" onclick="closeModal('bidDynamicModal')">&times;</span>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="bidDynamicEditId" value="">
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label>项目名称 <span class="hint" style="color:var(--danger)">(必填)</span></label>
+                    <input type="text" class="form-control" id="bidDynamicProjectName" placeholder="如：XX线信号系统采购项目">
+                </div>
+                <div class="form-group">
+                    <label>工程分类</label>
+                    <select class="form-control" id="bidDynamicCategory">
+                        <option value="">请选择</option>
+                        <option value="通信">通信</option>
+                        <option value="综合监控">综合监控</option>
+                        <option value="信号">信号</option>
+                        <option value="安防">安防</option>
+                        <option value="消防">消防</option>
+                        <option value="线网">线网</option>
+                        <option value="弱电">弱电</option>
+                        <option value="大总包">大总包</option>
+                        <option value="施工总包">施工总包</option>
+                        <option value="BOT">BOT</option>
+                        <option value="PPP">PPP</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>中标日期</label>
+                    <input type="date" class="form-control" id="bidDynamicDate">
+                </div>
+            </div>
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label>省份</label>
+                    <input type="text" class="form-control" id="bidDynamicProvince" placeholder="如：广东">
+                </div>
+                <div class="form-group">
+                    <label>城市</label>
+                    <input type="text" class="form-control" id="bidDynamicCity" placeholder="如：深圳">
+                </div>
+                <div class="form-group">
+                    <label>中标单位</label>
+                    <input type="text" class="form-control" id="bidDynamicWinner" placeholder="如：交控科技">
+                </div>
+            </div>
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label>联合体</label>
+                    <input type="text" class="form-control" id="bidDynamicConsortium" placeholder="联合体成员">
+                </div>
+                <div class="form-group">
+                    <label>中标金额（万元）</label>
+                    <input type="text" class="form-control" id="bidDynamicAmount" placeholder="如：25800">
+                </div>
+                <div class="form-group">
+                    <label>控制价（万元）</label>
+                    <input type="text" class="form-control" id="bidDynamicControlPrice" placeholder="如：30000">
+                </div>
+            </div>
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label>开通状态</label>
+                    <select class="form-control" id="bidDynamicIsOpened">
+                        <option value="">请选择</option>
+                        <option value="已开通">已开通</option>
+                        <option value="在建">在建</option>
+                        <option value="未开通">未开通</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>开通时间</label>
+                    <input type="date" class="form-control" id="bidDynamicOpeningDate" placeholder="YYYY-MM-DD">
+                </div>
+                <div class="form-group">
+                    <label>招标人</label>
+                    <input type="text" class="form-control" id="bidDynamicBidder" placeholder="招标人名称">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>项目概况</label>
+                    <textarea class="form-control" id="bidDynamicOverview" rows="2" placeholder="项目概况描述"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>招标范围</label>
+                    <textarea class="form-control" id="bidDynamicScope" rows="2" placeholder="招标范围描述"></textarea>
+                </div>
+            </div>
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label>线路类型</label>
+                    <input type="text" class="form-control" id="bidDynamicLineType" placeholder="如：地铁/轻轨/单轨">
+                </div>
+                <div class="form-group">
+                    <label>线路长度(km)</label>
+                    <input type="number" class="form-control" id="bidDynamicLengthKm" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>站点数(总站)</label>
+                    <input type="number" class="form-control" id="bidDynamicTotalStations" step="1">
+                </div>
+            </div>
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label>地下站（座）</label>
+                    <input type="number" class="form-control" id="bidDynamicUndergroundStations" step="1" placeholder="地下站数量">
+                </div>
+                <div class="form-group">
+                    <label>高架站（座）</label>
+                    <input type="number" class="form-control" id="bidDynamicElevatedStations" step="1" placeholder="高架站数量">
+                </div>
+                <div class="form-group">
+                    <label>地面站（座）</label>
+                    <input type="number" class="form-control" id="bidDynamicGroundStations" step="1" placeholder="地面站数量">
+                </div>
+            </div>
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label>GOA等级</label>
+                    <select class="form-control" id="bidDynamicGoaLevel">
+                        <option value="">请选择</option>
+                        <option value="GOA1">GOA1</option>
+                        <option value="GOA2">GOA2</option>
+                        <option value="GOA3">GOA3</option>
+                        <option value="GOA4">GOA4</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>制式模式</label>
+                    <input type="text" class="form-control" id="bidDynamicSystemMode" placeholder="如：CBTC/互联互通">
+                </div>
+                <div class="form-group">
+                    <label>开通站点数（座）</label>
+                    <input type="number" class="form-control" id="bidDynamicOpenedStations" step="1" placeholder="开通站点数量">
+                </div>
+            </div>
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label>包含系统</label>
+                    <input type="text" class="form-control" id="bidDynamicSubsystems" placeholder="如：通信/PIS/信号">
+                </div>
+                <div class="form-group">
+                    <label>招标门槛</label>
+                    <input type="text" class="form-control" id="bidDynamicThreshold" placeholder="招标门槛描述">
+                </div>
+                <div class="form-group">
+                    <label>资金来源</label>
+                    <input type="text" class="form-control" id="bidDynamicFundingSource" placeholder="如：政府投资/BOT">
+                </div>
+            </div>
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label>评标方法</label>
+                    <input type="text" class="form-control" id="bidDynamicEvaluationMethod" placeholder="如：综合评估法">
+                </div>
+                <div class="form-group">
+                    <label>设计单位</label>
+                    <input type="text" class="form-control" id="bidDynamicDesignUnit" placeholder="设计单位名称">
+                </div>
+                <div class="form-group">
+                    <label>平台软件(PIS)</label>
+                    <input type="text" class="form-control" id="bidDynamicPlatformSoftwarePis" placeholder="采用的平台软件">
+                </div>
+            </div>
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label>招标链接</label>
+                    <input type="text" class="form-control" id="bidDynamicTenderLink" placeholder="招标公告URL">
+                </div>
+                <div class="form-group">
+                    <label>中标链接</label>
+                    <input type="text" class="form-control" id="bidDynamicLink" placeholder="中标公告URL">
+                </div>
+                <div class="form-group">
+                    <label>备注</label>
+                    <textarea class="form-control" id="bidDynamicNotes" rows="1" placeholder="备注信息"></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal('bidDynamicModal')">取消</button>
+            <button class="btn btn-primary" onclick="saveBidDynamicRecord()">保存</button>
+        </div>
+    </div>
+</div>
+
 <!-- 中标记录导入模态框 -->
 <div class="modal-overlay" id="importModal">
     <div class="modal" style="width:550px">
@@ -1397,6 +1646,7 @@ document.querySelectorAll('.nav-menu li').forEach(li => {
         else if (page === 'wechat') loadWechatSources();
         else if (page === 'items') loadItems(1);
         else if (page === 'bid') loadBidRecords(1);
+        else if (page === 'bid-dynamic') loadBidDynamic(1);
         else if (page === 'mileage') loadMileageStats();
         else if (page === 'logs') loadSendLogs();
         else if (page === 'email') loadEmailConfig();
@@ -3687,6 +3937,490 @@ async function apiDelete(path) {
         method: 'DELETE'
     });
     return resp.json();
+}
+
+// ===== 中标动态（bid_raw）=====
+let bidDynamicPage = 1;
+let bidDynamicSelectedIds = new Set();
+
+async function loadBidDynamic(page) {
+    bidDynamicPage = page || 1;
+    const perPage = 20;
+    const container = document.getElementById('bidDynamicTable');
+    const pagination = document.getElementById('bidDynamicPagination');
+
+    // 获取筛选条件
+    const categoryBtn = document.getElementById('bidDynamicCategoryBtn');
+    const selectedCategories = (categoryBtn && categoryBtn.dataset.selected) || '';
+    const province = document.getElementById('bidDynamicFilterProvince')?.value || '';
+    const city = document.getElementById('bidDynamicFilterCity')?.value || '';
+    const dateFrom = document.getElementById('bidDynamicFilterDateFrom')?.value || '';
+    const dateTo = document.getElementById('bidDynamicFilterDateTo')?.value || '';
+    const keyword = document.getElementById('bidDynamicFilterKeyword')?.value || '';
+
+    let params = new URLSearchParams();
+    params.set('page', bidDynamicPage);
+    params.set('per_page', perPage);
+    if (selectedCategories) params.set('categories', selectedCategories);
+    if (province) params.set('province', province);
+    if (city) params.set('city', city);
+    if (dateFrom) params.set('date_from', dateFrom + '-01');
+    if (dateTo) {
+        const [y, m] = dateTo.split('-');
+        const lastDay = new Date(parseInt(y), parseInt(m), 0).getDate();
+        params.set('date_to', dateTo + '-' + String(lastDay).padStart(2,'0'));
+    }
+    if (keyword) params.set('keyword', keyword);
+
+    // 加载统计数据
+    loadBidDynamicStats();
+
+    try {
+        const resp = await fetch(API + '/bid-dynamic?' + params.toString());
+        const res = await resp.json();
+        if (!res.success) {
+            container.innerHTML = '<div class="error">加载失败: ' + (res.error || '') + '</div>';
+            return;
+        }
+        const data = res.data;
+
+        // 渲染表格
+        let html = '<table class="data-table"><thead><tr>';
+        html += '<th style="width:36px"><input type="checkbox" id="bidDynamicSelectAll" onchange="toggleSelectAllDynamic()"></th>';
+        html += '<th>项目名称</th><th>工程分类</th><th>中标单位</th><th>城市</th><th>中标金额(万)</th><th>中标日期</th><th>来源</th><th>操作</th>';
+        html += '</tr></thead><tbody>';
+
+        if (!data.items || data.items.length === 0) {
+            html += '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text-secondary)">暂无数据</td></tr>';
+        } else {
+            for (const item of data.items) {
+                const checked = bidDynamicSelectedIds.has(item.record_id) ? 'checked' : '';
+                const amount = item.bid_amount ? parseFloat(item.bid_amount).toLocaleString() : '-';
+                const date = item.bid_date ? item.bid_date.substring(0, 10) : '-';
+                const statusBadge = getBidDynamicStatusBadge(item);
+
+                html += `<tr>
+                    <td><input type="checkbox" class="bidDynamicCheckbox" value="${item.record_id}" ${checked} onchange="updateBidDynamicSelected()"></td>
+                    <td><a href="javascript:void(0)" onclick="viewBidDynamicDetail('${item.record_id}')" title="${escapeHtml(item.project_name || '')}">${escapeHtml(truncateText(item.project_name, 40))}</a></td>
+                    <td>${escapeHtml(item.category || '-')}</td>
+                    <td>${escapeHtml(truncateText(item.winner || '-', 20))}</td>
+                    <td>${escapeHtml(item.city || '-')}</td>
+                    <td style="text-align:right">${amount}</td>
+                    <td>${date}</td>
+                    <td>${escapeHtml(item.data_source || item.source || '-')}</td>
+                    <td class="action-cell">
+                        <button class="btn btn-sm btn-outline" onclick="editBidDynamicRecord('${item.record_id}')" title="编辑">✏️</button>
+                        <button class="btn btn-sm btn-outline" onclick="deleteBidDynamicRecord('${item.record_id}')" title="删除">🗑️</button>
+                    </td>
+                </tr>`;
+            }
+        }
+        html += '</tbody></table>';
+        container.innerHTML = html;
+
+        // 分页
+        let pagHtml = '';
+        if (data.total_pages > 1) {
+            pagHtml += `<button class="btn btn-sm btn-outline" onclick="loadBidDynamic(1)" ${bidDynamicPage<=1?'disabled':''}>首页</button>`;
+            pagHtml += `<button class="btn btn-sm btn-outline" onclick="loadBidDynamic(${bidDynamicPage-1})" ${bidDynamicPage<=1?'disabled':''}>上一页</button>`;
+            pagHtml += `<span style="margin:0 12px;font-size:13px">第 ${bidDynamicPage}/${data.total_pages} 页 (共 ${data.total} 条)</span>`;
+            pagHtml += `<button class="btn btn-sm btn-outline" onclick="loadBidDynamic(${bidDynamicPage+1})" ${bidDynamicPage>=data.total_pages?'disabled':''}>下一页</button>`;
+            pagHtml += `<button class="btn btn-sm btn-outline" onclick="loadBidDynamic(${data.total_pages})" ${bidDynamicPage>=data.total_pages?'disabled':''}>末页</button>`;
+        }
+        pagination.innerHTML = pagHtml;
+
+        // 更新筛选下拉
+        if (res.categories) updateBidDynamicFilterOptions(res.categories, res.cities, res.provinces);
+
+    } catch(e) {
+        container.innerHTML = '<div class="error">加载异常: ' + e.message + '</div>';
+    }
+}
+
+function getBidDynamicStatusBadge(item) {
+    if (item.is_opened === '已开通') return '<span class="badge badge-success">已开通</span>';
+    if (item.is_opened === '在建') return '<span class="badge badge-warning">在建</span>';
+    return '';
+}
+
+function truncateText(text, maxLen) {
+    if (!text) return '';
+    return text.length > maxLen ? text.substring(0, maxLen) + '...' : text;
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+async function loadBidDynamicStats() {
+    try {
+        const resp = await fetch(API + '/bid-dynamic/stats');
+        const res = await resp.json();
+        if (res.success && res.data) {
+            document.getElementById('bidDynamicTotalAmount').textContent =
+                (res.data.total_amount || 0).toLocaleString();
+            document.getElementById('bidDynamicTotalCount').textContent =
+                (res.data.total || 0).toLocaleString();
+        }
+    } catch(e) {}
+}
+
+function updateBidDynamicFilterOptions(categories, cities, provinces) {
+    // 分类多选
+    const catOptions = document.getElementById('bidDynamicCategoryOptions');
+    if (catOptions && categories && categories.length > 0) {
+        const btn = document.getElementById('bidDynamicCategoryBtn');
+        const selected = new Set((btn.dataset.selected || '').split(',').filter(Boolean));
+        catOptions.innerHTML = categories.map(c => {
+            const checked = selected.has(c) ? 'checked' : '';
+            return `<label class="multi-select-option"><input type="checkbox" value="${c}" ${checked} onchange="updateBidDynamicCategorySelected()"> ${c}</label>`;
+        }).join('');
+    }
+
+    // 省份
+    const provSelect = document.getElementById('bidDynamicFilterProvince');
+    if (provSelect && provinces && provSelect.options.length <= 1) {
+        provinces.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p; opt.textContent = p;
+            provSelect.appendChild(opt);
+        });
+    }
+
+    // 城市
+    const citySelect = document.getElementById('bidDynamicFilterCity');
+    if (citySelect && cities && citySelect.options.length <= 1) {
+        cities.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c; opt.textContent = c;
+            citySelect.appendChild(opt);
+        });
+    }
+}
+
+function updateBidDynamicCategorySelected() {
+    const checkboxes = document.querySelectorAll('#bidDynamicCategoryOptions input[type=checkbox]');
+    const selected = [];
+    checkboxes.forEach(cb => { if (cb.checked) selected.push(cb.value); });
+    const btn = document.getElementById('bidDynamicCategoryBtn');
+    btn.dataset.selected = selected.join(',');
+    btn.textContent = selected.length > 0 ? `分类 (${selected.length})` : '选择分类';
+    // 关闭下拉
+    document.getElementById('bidDynamicCategoryDropdown')?.classList.remove('show');
+}
+
+function selectAllDynamicCategories() {
+    document.querySelectorAll('#bidDynamicCategoryOptions input[type=checkbox]').forEach(cb => cb.checked = true);
+    updateBidDynamicCategorySelected();
+    loadBidDynamic(1);
+}
+
+function clearAllDynamicCategories() {
+    document.querySelectorAll('#bidDynamicCategoryOptions input[type=checkbox]').forEach(cb => cb.checked = false);
+    updateBidDynamicCategorySelected();
+    loadBidDynamic(1);
+}
+
+function clearBidDynamicSearch() {
+    document.getElementById('bidDynamicFilterKeyword').value = '';
+    loadBidDynamic(1);
+}
+
+function clearBidDynamicFilters() {
+    document.getElementById('bidDynamicFilterKeyword').value = '';
+    document.getElementById('bidDynamicFilterDateFrom').value = '';
+    document.getElementById('bidDynamicFilterDateTo').value = '';
+    document.getElementById('bidDynamicFilterProvince').value = '';
+    document.getElementById('bidDynamicFilterCity').value = '';
+    const btn = document.getElementById('bidDynamicCategoryBtn');
+    if (btn) { btn.dataset.selected = ''; btn.textContent = '选择分类'; }
+    clearAllDynamicCategories();
+    document.querySelectorAll('#bidDynamicCategoryOptions input[type=checkbox]').forEach(cb => cb.checked = false);
+    loadBidDynamic(1);
+}
+
+function toggleSelectAllDynamic() {
+    const selectAll = document.getElementById('bidDynamicSelectAll');
+    const checkboxes = document.querySelectorAll('.bidDynamicCheckbox');
+    const isChecked = selectAll.checked;
+    checkboxes.forEach(cb => {
+        cb.checked = isChecked;
+        if (isChecked) bidDynamicSelectedIds.add(cb.value);
+        else bidDynamicSelectedIds.delete(cb.value);
+    });
+    updateBidDynamicSelected();
+}
+
+function updateBidDynamicSelected() {
+    bidDynamicSelectedIds.clear();
+    document.querySelectorAll('.bidDynamicCheckbox:checked').forEach(cb => {
+        bidDynamicSelectedIds.add(cb.value);
+    });
+    document.getElementById('bidDynamicSelectedCount').textContent =
+        bidDynamicSelectedIds.size > 0 ? `已选 ${bidDynamicSelectedIds.size} 条` : '';
+}
+
+function openBidDynamicModal(editId) {
+    const modal = document.getElementById('bidDynamicModal');
+    document.getElementById('bidDynamicEditId').value = editId || '';
+    document.getElementById('bidDynamicModalTitle').textContent = editId ? '编辑中标动态' : '新增中标动态';
+
+    // 清空表单
+    const formFields = [
+        'bidDynamicProjectName', 'bidDynamicCategory', 'bidDynamicDate',
+        'bidDynamicProvince', 'bidDynamicCity', 'bidDynamicWinner',
+        'bidDynamicConsortium', 'bidDynamicAmount', 'bidDynamicControlPrice',
+        'bidDynamicIsOpened', 'bidDynamicOpeningDate', 'bidDynamicBidder',
+        'bidDynamicOverview', 'bidDynamicScope', 'bidDynamicLineType',
+        'bidDynamicLengthKm', 'bidDynamicTotalStations', 'bidDynamicUndergroundStations',
+        'bidDynamicElevatedStations', 'bidDynamicGroundStations', 'bidDynamicGoaLevel',
+        'bidDynamicSystemMode', 'bidDynamicOpenedStations', 'bidDynamicSubsystems',
+        'bidDynamicThreshold', 'bidDynamicFundingSource', 'bidDynamicEvaluationMethod',
+        'bidDynamicDesignUnit', 'bidDynamicPlatformSoftwarePis',
+        'bidDynamicTenderLink', 'bidDynamicLink', 'bidDynamicNotes'
+    ];
+    formFields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (el.tagName === 'SELECT') el.selectedIndex = 0;
+            else el.value = '';
+        }
+    });
+
+    if (editId) {
+        // 编辑模式：加载数据
+        fetch(API + '/bid-dynamic/' + editId)
+            .then(r => r.json())
+            .then(res => {
+                if (res.success && res.data) {
+                    const d = res.data;
+                    document.getElementById('bidDynamicProjectName').value = d.project_name || '';
+                    document.getElementById('bidDynamicCategory').value = d.category || '';
+                    document.getElementById('bidDynamicDate').value = d.bid_date ? d.bid_date.substring(0,10) : '';
+                    document.getElementById('bidDynamicProvince').value = d.province || '';
+                    document.getElementById('bidDynamicCity').value = d.city || '';
+                    document.getElementById('bidDynamicWinner').value = d.winner || '';
+                    document.getElementById('bidDynamicConsortium').value = d.consortium || '';
+                    document.getElementById('bidDynamicAmount').value = d.bid_amount || '';
+                    document.getElementById('bidDynamicControlPrice').value = d.control_price || '';
+                    document.getElementById('bidDynamicIsOpened').value = d.is_opened || '';
+                    document.getElementById('bidDynamicOpeningDate').value = d.opening_date ? d.opening_date.substring(0,10) : '';
+                    document.getElementById('bidDynamicBidder').value = d.bidder || '';
+                    document.getElementById('bidDynamicOverview').value = d.project_overview || '';
+                    document.getElementById('bidDynamicScope').value = d.bid_scope || '';
+                    document.getElementById('bidDynamicLineType').value = d.line_type || '';
+                    document.getElementById('bidDynamicLengthKm').value = d.length_km || '';
+                    document.getElementById('bidDynamicTotalStations').value = d.total_stations || '';
+                    document.getElementById('bidDynamicUndergroundStations').value = d.underground_stations || '';
+                    document.getElementById('bidDynamicElevatedStations').value = d.elevated_stations || '';
+                    document.getElementById('bidDynamicGroundStations').value = d.ground_stations || '';
+                    document.getElementById('bidDynamicGoaLevel').value = d.goa_level || '';
+                    document.getElementById('bidDynamicSystemMode').value = d.system_mode || '';
+                    document.getElementById('bidDynamicOpenedStations').value = d.opened_stations || '';
+                    document.getElementById('bidDynamicSubsystems').value = d.subsystems || '';
+                    document.getElementById('bidDynamicThreshold').value = d.bid_threshold || '';
+                    document.getElementById('bidDynamicFundingSource').value = d.funding_source || '';
+                    document.getElementById('bidDynamicEvaluationMethod').value = d.evaluation_method || '';
+                    document.getElementById('bidDynamicDesignUnit').value = d.design_unit || '';
+                    document.getElementById('bidDynamicPlatformSoftwarePis').value = d.platform_software_pis || '';
+                    document.getElementById('bidDynamicTenderLink').value = d.tender_link || '';
+                    document.getElementById('bidDynamicLink').value = d.bid_link || '';
+                    document.getElementById('bidDynamicNotes').value = d.notes || '';
+                }
+            })
+            .catch(e => toast('加载记录详情失败: ' + e.message, 'error'));
+    }
+
+    modal.classList.add('show');
+}
+
+async function saveBidDynamicRecord() {
+    const editId = document.getElementById('bidDynamicEditId').value;
+    const projectName = document.getElementById('bidDynamicProjectName').value.trim();
+    if (!projectName) {
+        toast('项目名称不能为空', 'error');
+        return;
+    }
+
+    const data = {
+        project_name: projectName,
+        category: document.getElementById('bidDynamicCategory').value,
+        bid_date: document.getElementById('bidDynamicDate').value,
+        province: document.getElementById('bidDynamicProvince').value,
+        city: document.getElementById('bidDynamicCity').value,
+        winner: document.getElementById('bidDynamicWinner').value,
+        consortium: document.getElementById('bidDynamicConsortium').value,
+        bid_amount: document.getElementById('bidDynamicAmount').value ? parseFloat(document.getElementById('bidDynamicAmount').value) : null,
+        control_price: document.getElementById('bidDynamicControlPrice').value ? parseFloat(document.getElementById('bidDynamicControlPrice').value) : null,
+        is_opened: document.getElementById('bidDynamicIsOpened').value,
+        opening_date: document.getElementById('bidDynamicOpeningDate').value,
+        bidder: document.getElementById('bidDynamicBidder').value,
+        project_overview: document.getElementById('bidDynamicOverview').value,
+        bid_scope: document.getElementById('bidDynamicScope').value,
+        line_type: document.getElementById('bidDynamicLineType').value,
+        length_km: document.getElementById('bidDynamicLengthKm').value ? parseFloat(document.getElementById('bidDynamicLengthKm').value) : null,
+        total_stations: document.getElementById('bidDynamicTotalStations').value ? parseInt(document.getElementById('bidDynamicTotalStations').value) : null,
+        underground_stations: document.getElementById('bidDynamicUndergroundStations').value ? parseInt(document.getElementById('bidDynamicUndergroundStations').value) : null,
+        elevated_stations: document.getElementById('bidDynamicElevatedStations').value ? parseInt(document.getElementById('bidDynamicElevatedStations').value) : null,
+        ground_stations: document.getElementById('bidDynamicGroundStations').value ? parseInt(document.getElementById('bidDynamicGroundStations').value) : null,
+        goa_level: document.getElementById('bidDynamicGoaLevel').value,
+        system_mode: document.getElementById('bidDynamicSystemMode').value,
+        opened_stations: document.getElementById('bidDynamicOpenedStations').value ? parseInt(document.getElementById('bidDynamicOpenedStations').value) : null,
+        subsystems: document.getElementById('bidDynamicSubsystems').value,
+        bid_threshold: document.getElementById('bidDynamicThreshold').value,
+        funding_source: document.getElementById('bidDynamicFundingSource').value,
+        evaluation_method: document.getElementById('bidDynamicEvaluationMethod').value,
+        design_unit: document.getElementById('bidDynamicDesignUnit').value,
+        platform_software_pis: document.getElementById('bidDynamicPlatformSoftwarePis').value,
+        tender_link: document.getElementById('bidDynamicTenderLink').value,
+        bid_link: document.getElementById('bidDynamicLink').value,
+        notes: document.getElementById('bidDynamicNotes').value,
+    };
+
+    try {
+        let resp;
+        if (editId) {
+            resp = await fetch(API + '/bid-dynamic/' + editId, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+        } else {
+            resp = await fetch(API + '/bid-dynamic', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+        }
+        const res = await resp.json();
+        if (res.success) {
+            toast(editId ? '中标动态已更新' : '中标动态已创建');
+            closeModal('bidDynamicModal');
+            loadBidDynamic(bidDynamicPage);
+        } else {
+            toast('保存失败: ' + (res.error || ''), 'error');
+        }
+    } catch(e) {
+        toast('保存异常: ' + e.message, 'error');
+    }
+}
+
+async function editBidDynamicRecord(recordId) {
+    openBidDynamicModal(recordId);
+}
+
+async function deleteBidDynamicRecord(recordId) {
+    if (!confirm('确定要删除这条中标动态记录吗？')) return;
+    try {
+        const resp = await fetch(API + '/bid-dynamic/' + recordId, { method: 'DELETE' });
+        const res = await resp.json();
+        if (res.success) {
+            toast('已删除');
+            loadBidDynamic(bidDynamicPage);
+        } else {
+            toast('删除失败: ' + (res.error || ''), 'error');
+        }
+    } catch(e) {
+        toast('删除异常: ' + e.message, 'error');
+    }
+}
+
+async function viewBidDynamicDetail(recordId) {
+    try {
+        const resp = await fetch(API + '/bid-dynamic/' + recordId);
+        const res = await resp.json();
+        if (!res.success || !res.data) {
+            toast('获取详情失败', 'error');
+            return;
+        }
+        const d = res.data;
+        let html = '<div style="padding:16px;max-height:70vh;overflow-y:auto">';
+        html += `<h3 style="margin-bottom:16px">${escapeHtml(d.project_name || '')}</h3>`;
+        html += '<table style="width:100%;border-collapse:collapse">';
+        const fields = [
+            ['工程分类', d.category], ['中标单位', d.winner], ['联合体', d.consortium],
+            ['省份', d.province], ['城市', d.city],
+            ['中标金额（万元）', d.bid_amount ? parseFloat(d.bid_amount).toLocaleString() : '-'],
+            ['控制价（万元）', d.control_price ? parseFloat(d.control_price).toLocaleString() : '-'],
+            ['中标日期', d.bid_date ? d.bid_date.substring(0,10) : '-'],
+            ['开通状态', d.is_opened || '-'],
+            ['开通时间', d.opening_date ? d.opening_date.substring(0,10) : '-'],
+            ['招标人', d.bidder || '-'],
+            ['项目概况', d.project_overview || '-'],
+            ['招标范围', d.bid_scope || '-'],
+            ['线路类型', d.line_type || '-'],
+            ['线路长度(km)', d.length_km || '-'],
+            ['总站数', d.total_stations ?? '-'],
+            ['地下站', d.underground_stations ?? '-'],
+            ['高架站', d.elevated_stations ?? '-'],
+            ['地面站', d.ground_stations ?? '-'],
+            ['GOA等级', d.goa_level || '-'],
+            ['制式模式', d.system_mode || '-'],
+            ['开通站数', d.opened_stations ?? '-'],
+            ['包含系统', d.subsystems || '-'],
+            ['招标门槛', d.bid_threshold || '-'],
+            ['资金来源', d.funding_source || '-'],
+            ['评标方法', d.evaluation_method || '-'],
+            ['设计单位', d.design_unit || '-'],
+            ['平台软件(PIS)', d.platform_software_pis || '-'],
+            ['数据来源', d.data_source || '-'],
+            ['备注', d.notes || '-'],
+        ];
+        fields.forEach(([label, value]) => {
+            html += `<tr><td style="padding:6px 12px;font-weight:500;color:var(--text-secondary);width:120px;border-bottom:1px solid var(--border-color)">${label}</td>`;
+            html += `<td style="padding:6px 12px;border-bottom:1px solid var(--border-color)">${escapeHtml(String(value))}</td></tr>`;
+        });
+        html += '</table></div>';
+
+        // 显示在模态框中
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay show';
+        modal.innerHTML = `<div class="modal" style="width:800px">
+            <div class="modal-header">
+                <h3>中标动态详情</h3>
+                <span class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</span>
+            </div>
+            <div class="modal-body">${html}</div>
+        </div>`;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) this.remove();
+        });
+    } catch(e) {
+        toast('获取详情异常: ' + e.message, 'error');
+    }
+}
+
+async function transferSelectedBidDynamic() {
+    const ids = Array.from(bidDynamicSelectedIds);
+    if (ids.length === 0) {
+        toast('请先选择要提取的记录', 'error');
+        return;
+    }
+
+    if (!confirm(`确定将选中的 ${ids.length} 条记录提取到中标数据表吗？`)) return;
+
+    try {
+        const resp = await fetch(API + '/bid-dynamic/transfer', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({record_ids: ids})
+        });
+        const res = await resp.json();
+        if (res.success) {
+            toast(res.message || '提取完成');
+            bidDynamicSelectedIds.clear();
+            document.getElementById('bidDynamicSelectedCount').textContent = '';
+            loadBidDynamic(bidDynamicPage);
+        } else {
+            toast('提取失败: ' + (res.error || ''), 'error');
+        }
+    } catch(e) {
+        toast('提取异常: ' + e.message, 'error');
+    }
 }
 
 // 初始加载

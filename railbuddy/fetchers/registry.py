@@ -1,8 +1,11 @@
 """抓取器注册与管理器 - 统一管理所有数据源抓取器"""
 
 import logging
+import re
+import hashlib
 from typing import List, Dict, Optional
 from datetime import datetime, timedelta
+from collections import defaultdict
 
 from .base import BaseFetcher
 from .website import WebsiteFetcher
@@ -11,7 +14,7 @@ from .weibo import WeiboFetcher
 from .api import ApiFetcher
 from .wikipedia import WikipediaFetcher
 from .mot import MOTFetcher
-from ..models import BidItem, TransitMileage
+from ..models import BidItem, TransitMileage, BidRecord
 from ..database import Database
 from ..utils.filters import filter_rail_transit_items
 
@@ -157,19 +160,216 @@ class FetcherManager:
             saved = db.save_mileage_batch(all_mileage)
             logger.info(f"里程数据批量保存: {saved}/{len(all_mileage)} 条")
 
-        # 自动转存：从中标公告 items 中提取信息写入 bid_records
-        if all_new_items:
-            try:
-                from ..data.auto_transfer import AutoTransfer
-                transfer = AutoTransfer(db)
-                t_result = transfer.transfer(all_new_items)
-                if t_result["transferred"] > 0:
-                    logger.info(
-                        f"自动转存: {t_result['transferred']} 条中标记录入库, "
-                        f"分类: {t_result['categories']}"
-                    )
-            except Exception as e:
-                logger.warning(f"自动转存异常（不影响主流程）: {e}")
+        # ---- 新增：独立抓取中标数据，写入 bid_raw 表 ----
+        # 从本次抓取的所有 items（包括已存在去重前的）中，筛选中标类条目，
+        # 解析结构化字段后写入 bid_raw 表（供"中标动态"模块审核使用）
+        try:
+            self._extract_to_bid_raw(db, all_new_items)
+        except Exception as e:
+            logger.error(f"中标数据提取到 bid_raw 异常（不影响主流程）: {e}", exc_info=True)
 
         logger.info(f"全部源抓取完成，共新增 {len(all_new_items)} 条未发送条目")
         return all_new_items
+
+    def _extract_to_bid_raw(self, db: Database, new_items: List[BidItem]):
+        """从抓取结果中提取中标类数据，写入 bid_raw 表
+
+        流程：
+        1. 从 new_items 中筛选出中标类条目（category='中标' 或标题含中标关键词）
+        2. 解析标题/描述，提取：项目名称、中标单位、金额、城市、分类等
+        3. 去重后写入 bid_raw 表
+        """
+        if not new_items:
+            return
+
+        # 中标关键词
+        BID_KEYWORDS = [
+            "中标", "成交结果", "结果公示", "中标候选人",
+            "中标结果", "成交公示",
+        ]
+        EXCLUDE_KEYWORDS = [
+            "招标计划", "变更公告", "澄清", "更正", "补充公告", "终止公告",
+        ]
+
+        # 工程分类关键词映射
+        CATEGORY_KEYWORDS = {
+            "信号": ["信号系统", "信号", "CBTC", "联锁系统", "计算机联锁", "ATP", "ATO", "ATS"],
+            "通信": ["通信系统", "通信", "传输系统", "无线通信", "TETRA", "LTE-M", "5G-R",
+                     "广播系统", "乘客信息", "PIS", "时钟系统", "电话系统"],
+            "综合监控": ["综合监控", "ISCS", "环境监控", "BAS", "FAS", "SCADA", "电力监控"],
+            "安防": ["安防", "安检", "安全检查", "视频监控", "CCTV", "门禁", "入侵检测",
+                    "AFC", "自动售检票", "售检票系统", "清分系统"],
+            "消防": ["消防", "气体灭火", "水消防", "火灾报警"],
+            "弱电": ["弱电系统", "弱电", "综合布线", "网络系统", "电源系统", "UPS"],
+            "施工总包": ["施工总承包", "施工总包", "工程总承包", "EPC"],
+            "大总包": ["设备集成", "系统集成", "总包", "总集成", "机电总承包"],
+            "PPP": ["PPP", "政府和社会资本", "特许经营", "BOT"],
+        }
+
+        # 金额提取正则
+        AMOUNT_PATTERNS = [
+            re.compile(r"中标金额[：:]\s*([\d,]+\.?\d*)\s*万", re.IGNORECASE),
+            re.compile(r"中标价[：:]\s*([\d,]+\.?\d*)\s*万", re.IGNORECASE),
+            re.compile(r"金额[：:]\s*([\d,]+\.?\d*)\s*万", re.IGNORECASE),
+            re.compile(r"([\d,]+\.?\d*)\s*万元", re.IGNORECASE),
+            re.compile(r"￥\s*([\d,]+\.?\d*)", re.IGNORECASE),
+            re.compile(r"¥\s*([\d,]+\.?\d*)", re.IGNORECASE),
+        ]
+
+        # 中标单位提取正则
+        WINNER_PATTERNS = [
+            re.compile(r"中标单位[：:]\s*(.+?)(?:[；;，,。]|$)", re.IGNORECASE),
+            re.compile(r"中标人[：:]\s*(.+?)(?:[；;，,。]|$)", re.IGNORECASE),
+            re.compile(r"供应商[：:]\s*(.+?)(?:[；;，,。]|$)", re.IGNORECASE),
+            re.compile(r"第一中标候选人[：:]\s*(.+?)(?:[；;，,。]|$)", re.IGNORECASE),
+        ]
+
+        # 常见城市列表
+        COMMON_CITIES = [
+            "北京", "上海", "广州", "深圳", "成都", "武汉", "南京", "重庆",
+            "杭州", "天津", "苏州", "西安", "郑州", "长沙", "沈阳", "青岛",
+            "大连", "宁波", "合肥", "昆明", "南宁", "厦门", "无锡", "贵阳",
+            "南昌", "福州", "济南", "兰州", "长春", "哈尔滨", "石家庄",
+            "太原", "东莞", "佛山", "常州", "徐州", "温州", "绍兴", "芜湖",
+            "洛阳", "嘉兴", "呼和浩特", "乌鲁木齐",
+        ]
+
+        # 1. 筛选中标类条目
+        candidates = []
+        for item in new_items:
+            title = getattr(item, "title", "") or ""
+            # 排除非中标类
+            if any(kw in title for kw in EXCLUDE_KEYWORDS):
+                continue
+            # 通过 category 或标题关键词判断
+            if getattr(item, "category", "") == "中标":
+                candidates.append(item)
+            elif any(kw in title for kw in BID_KEYWORDS):
+                candidates.append(item)
+
+        if not candidates:
+            return
+
+        logger.info(f"中标数据提取: {len(candidates)} 条候选条目")
+
+        # 2. 逐条解析为结构化记录
+        raw_records = []
+        now = datetime.now().isoformat()
+
+        for item in candidates:
+            try:
+                title = getattr(item, "title", "") or ""
+                desc = getattr(item, "description", "") or ""
+                text = f"{title} {desc}"
+                source = getattr(item, "source", "") or ""
+
+                # 映射分类
+                category = self._map_bid_category(title, desc, CATEGORY_KEYWORDS)
+
+                # 提取项目名称
+                project_name = self._extract_bid_project_name(title)
+
+                # 提取中标单位
+                winner = ""
+                for pattern in WINNER_PATTERNS:
+                    match = pattern.search(text)
+                    if match:
+                        winner = match.group(1).strip()
+                        winner = re.sub(r"[；;，,。]$", "", winner)
+                        if len(winner) > 50:
+                            winner = winner[:50]
+                        break
+
+                # 提取金额
+                bid_amount = None
+                for pattern in AMOUNT_PATTERNS:
+                    match = pattern.search(text)
+                    if match:
+                        try:
+                            amount_str = match.group(1).replace(",", "")
+                            amount = float(amount_str)
+                            if amount > 0:
+                                bid_amount = amount
+                                break
+                        except (ValueError, TypeError):
+                            continue
+
+                # 提取城市
+                city = ""
+                for c in COMMON_CITIES:
+                    if c in text:
+                        city = c
+                        break
+
+                # 提取日期
+                bid_date = getattr(item, "publish_date", None) or ""
+
+                # 生成 record_id
+                record_id_str = f"{project_name}{bid_date}".encode("utf-8")
+                record_id = hashlib.md5(record_id_str).hexdigest()
+
+                record = BidRecord(
+                    record_id=record_id,
+                    project_name=project_name,
+                    category=category,
+                    winner=winner,
+                    city=city,
+                    bid_date=bid_date,
+                    bid_amount=bid_amount,
+                    project_overview=desc[:500] if desc else "",
+                    bid_link=getattr(item, "url", "") or "",
+                    data_source=source,
+                    created_at=now,
+                    updated_at=now,
+                )
+                raw_records.append(record)
+            except Exception as e:
+                logger.debug(f"解析中标条目异常: {e}")
+                continue
+
+        if not raw_records:
+            return
+
+        # 3. 去重（同一 record_id 只保留一条）
+        seen_ids = set()
+        unique_records = []
+        for r in raw_records:
+            if r.record_id not in seen_ids:
+                seen_ids.add(r.record_id)
+                unique_records.append(r)
+
+        # 4. 批量写入 bid_raw 表
+        result = db.save_bid_raw_batch(unique_records)
+        if result["inserted"] > 0 or result["updated"] > 0:
+            logger.info(
+                f"中标数据写入 bid_raw: 共 {len(unique_records)} 条 "
+                f"(新增 {result['inserted']}, 更新 {result['updated']})"
+            )
+
+    def _map_bid_category(self, title: str, desc: str,
+                          category_keywords: Dict) -> str:
+        """根据标题+描述关键词映射到工程分类"""
+        text = f"{title} {desc}"
+        for cat, keywords in category_keywords.items():
+            for kw in keywords:
+                if kw in text:
+                    return cat
+        if "监控" in text:
+            return "综合监控"
+        if "安防" in text:
+            return "安防"
+        if "施工" in text or "土建" in text:
+            return "施工总包"
+        return "其他"
+
+    def _extract_bid_project_name(self, title: str) -> str:
+        """从标题中提取项目名称"""
+        if not title:
+            return ""
+        cleaned = re.sub(r"^\[.{1,8}\]\s*", "", title)
+        cleaned = re.sub(r"^【.{1,20}】\s*", "", cleaned)
+        cleaned = re.sub(r"^（.{1,20}）\s*", "", cleaned)
+        cleaned = re.sub(r"[\s\-—]+(中标|成交|结果).*$", "", cleaned)
+        if len(cleaned) > 80:
+            cleaned = cleaned[:80]
+        return cleaned.strip()

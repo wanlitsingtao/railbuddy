@@ -1233,6 +1233,217 @@ class WebServer:
                 logger.error(f"Fill single amount error: {e}", exc_info=True)
                 return jsonify({"success": False, "error": str(e)}), 500
 
+        # ---- 中标动态（bid_raw）CRUD ----
+        @app.route("/api/bid-dynamic", methods=["GET"])
+        def api_bid_dynamic_list():
+            """分页查询中标动态（bid_raw），支持多维度筛选"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+                page = int(request.args.get("page", 1))
+                per_page = int(request.args.get("per_page", 20))
+                categories_str = request.args.get("categories") or None
+                categories = categories_str.split(",") if categories_str else None
+                category = request.args.get("category") or None
+                city = request.args.get("city") or None
+                province = request.args.get("province") or None
+                winner = request.args.get("winner") or None
+                keyword = request.args.get("keyword") or None
+                date_from = request.args.get("date_from") or None
+                date_to = request.args.get("date_to") or None
+
+                result = db.get_bid_raw_paginated(
+                    page=page, per_page=per_page,
+                    categories=categories, category=category,
+                    city=city, province=province,
+                    winner=winner, keyword=keyword,
+                    date_from=date_from, date_to=date_to
+                )
+
+                categories_list = db.get_bid_raw_categories()
+                cities = db.get_bid_raw_cities()
+                provinces = db.get_bid_raw_provinces()
+
+                return jsonify({
+                    "success": True,
+                    "data": result,
+                    "categories": categories_list,
+                    "cities": cities,
+                    "provinces": provinces,
+                })
+            except Exception as e:
+                logger.error(f"Bid dynamic list error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/bid-dynamic/<record_id>", methods=["GET"])
+        def api_bid_dynamic_detail(record_id):
+            """获取单条中标动态详情"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+                record = db.get_bid_raw(record_id)
+                if not record:
+                    return jsonify({"success": False, "error": "记录不存在"}), 404
+                return jsonify({"success": True, "data": record})
+            except Exception as e:
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/bid-dynamic", methods=["POST"])
+        def api_bid_dynamic_create():
+            """新增中标动态记录"""
+            try:
+                data = request.json
+                if not data or not data.get("project_name"):
+                    return jsonify({"success": False, "error": "项目名称不能为空"}), 400
+
+                record = BidRecord(
+                    project_name=data["project_name"],
+                    province=data.get("province", ""),
+                    city=data.get("city", ""),
+                    category=data.get("category", ""),
+                    winner=data.get("winner", ""),
+                    consortium=data.get("consortium", ""),
+                    project_overview=data.get("project_overview", ""),
+                    bid_scope=data.get("bid_scope", ""),
+                    subsystems=data.get("subsystems", ""),
+                    bid_threshold=data.get("bid_threshold", ""),
+                    bidder=data.get("bidder", ""),
+                    funding_source=data.get("funding_source", ""),
+                    evaluation_method=data.get("evaluation_method", ""),
+                    total_stations=data.get("total_stations"),
+                    underground_stations=data.get("underground_stations"),
+                    elevated_stations=data.get("elevated_stations"),
+                    ground_stations=data.get("ground_stations"),
+                    opened_stations=data.get("opened_stations"),
+                    line_type=data.get("line_type", ""),
+                    length_km=data.get("length_km"),
+                    goa_level=data.get("goa_level", ""),
+                    system_mode=data.get("system_mode", ""),
+                    is_opened=data.get("is_opened", ""),
+                    opening_date=data.get("opening_date"),
+                    bid_date=data.get("bid_date"),
+                    bid_amount=data.get("bid_amount"),
+                    control_price=data.get("control_price"),
+                    bid_link=data.get("bid_link", ""),
+                    tender_link=data.get("tender_link", ""),
+                    design_unit=data.get("design_unit", ""),
+                    platform_software_pis=data.get("platform_software_pis", ""),
+                    notes=data.get("notes", ""),
+                    data_source="manual",
+                )
+
+                config = self._load_config()
+                db = self._get_db(config)
+                db.save_bid_raw(record)
+
+                return jsonify({
+                    "success": True,
+                    "message": "中标动态记录已创建",
+                    "data": {"record_id": record.record_id}
+                })
+            except Exception as e:
+                logger.error(f"Bid dynamic create error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/bid-dynamic/<record_id>", methods=["PUT"])
+        def api_bid_dynamic_update(record_id):
+            """更新中标动态记录（全字段更新）"""
+            try:
+                data = request.json
+                if not data:
+                    return jsonify({"success": False, "error": "无更新数据"}), 400
+
+                config = self._load_config()
+                db = self._get_db(config)
+                data.pop("record_id", None)
+                success = db.update_bid_raw(record_id, data)
+                if not success:
+                    return jsonify({"success": False, "error": "记录不存在"}), 404
+
+                return jsonify({"success": True, "message": "中标动态记录已更新"})
+            except Exception as e:
+                logger.error(f"Bid dynamic update error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/bid-dynamic/<record_id>", methods=["DELETE"])
+        def api_bid_dynamic_delete(record_id):
+            """删除中标动态记录"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+                success = db.delete_bid_raw(record_id)
+                if not success:
+                    return jsonify({"success": False, "error": "记录不存在"}), 404
+
+                return jsonify({"success": True, "message": "中标动态记录已删除"})
+            except Exception as e:
+                logger.error(f"Bid dynamic delete error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/bid-dynamic/stats")
+        def api_bid_dynamic_stats():
+            """中标动态统计概要"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+                stats = db.get_bid_raw_stats()
+                return jsonify({"success": True, "data": stats})
+            except Exception as e:
+                logger.error(f"Bid dynamic stats error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/bid-dynamic/transfer", methods=["POST"])
+        def api_bid_dynamic_transfer():
+            """将选中的中标动态记录提取到中标数据表（bid_records）"""
+            try:
+                data = request.json
+                if not data or not data.get("record_ids"):
+                    return jsonify({"success": False, "error": "请选择要提取的记录"}), 400
+
+                config = self._load_config()
+                db = self._get_db(config)
+                result = db.transfer_bid_raw_to_records(data["record_ids"])
+
+                return jsonify({
+                    "success": True,
+                    "message": f"提取完成: {result['transferred']} 条已提取, {result['skipped']} 条跳过",
+                    "data": result
+                })
+            except Exception as e:
+                logger.error(f"Bid dynamic transfer error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/bid-dynamic/check-duplicate", methods=["POST"])
+        def api_bid_dynamic_check_duplicate():
+            """检查 bid_raw 中的记录是否在 bid_records 中已存在"""
+            try:
+                data = request.json
+                record_ids = data.get("record_ids", [])
+                if not record_ids:
+                    return jsonify({"success": True, "data": {"existing": [], "new": []}})
+
+                config = self._load_config()
+                db = self._get_db(config)
+                existing_in_records = set()
+                with db._get_conn() as conn:
+                    for rid in record_ids:
+                        row = conn.execute(
+                            "SELECT record_id FROM bid_records WHERE record_id = ?", (rid,)
+                        ).fetchone()
+                        if row:
+                            existing_in_records.add(rid)
+
+                return jsonify({
+                    "success": True,
+                    "data": {
+                        "existing": list(existing_in_records),
+                        "new": [rid for rid in record_ids if rid not in existing_in_records]
+                    }
+                })
+            except Exception as e:
+                logger.error(f"Bid dynamic check duplicate error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
     def run(self, debug: bool = False):
         """启动 Web 服务器"""
         logger.info(f"RailBuddy Web 管理界面启动: http://localhost:{self.port}")
