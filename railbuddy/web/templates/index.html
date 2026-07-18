@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -1078,15 +1078,16 @@
     </div>
 </div>
 
-<!-- 中标记录新增/编辑模态框 -->
+<!-- 中标记录新增/编辑模态框（全字段编辑） -->
 <div class="modal-overlay" id="bidModal">
-    <div class="modal" style="width:800px">
+    <div class="modal" style="width:900px">
         <div class="modal-header">
             <h3 id="bidModalTitle">新增中标记录</h3>
             <span class="modal-close" onclick="closeModal('bidModal')">&times;</span>
         </div>
         <div class="modal-body">
             <input type="hidden" id="bidEditId" value="">
+            <!-- 第一行：项目名称 + 工程分类 + 中标日期 -->
             <div class="form-row-3">
                 <div class="form-group">
                     <label>项目名称 <span class="hint" style="color:var(--danger)">(必填)</span></label>
@@ -1115,6 +1116,7 @@
                     <input type="date" class="form-control" id="bidDate">
                 </div>
             </div>
+            <!-- 第二行：省份 + 城市 + 中标单位 -->
             <div class="form-row-3">
                 <div class="form-group">
                     <label>省份</label>
@@ -1129,6 +1131,7 @@
                     <input type="text" class="form-control" id="bidWinner" placeholder="如：交控科技">
                 </div>
             </div>
+            <!-- 第三行：联合体 + 中标金额 + 控制价 -->
             <div class="form-row-3">
                 <div class="form-group">
                     <label>联合体</label>
@@ -1139,6 +1142,13 @@
                     <input type="text" class="form-control" id="bidAmount" placeholder="如：25800">
                 </div>
                 <div class="form-group">
+                    <label>控制价（万元）</label>
+                    <input type="text" class="form-control" id="bidControlPrice" placeholder="如：30000">
+                </div>
+            </div>
+            <!-- 第四行：开通状态 + 开通时间 + 招标人 -->
+            <div class="form-row-3">
+                <div class="form-group">
                     <label>开通状态</label>
                     <select class="form-control" id="bidIsOpened">
                         <option value="">请选择</option>
@@ -1147,7 +1157,16 @@
                         <option value="未开通">未开通</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>开通时间</label>
+                    <input type="date" class="form-control" id="bidOpeningDate" placeholder="YYYY-MM-DD">
+                </div>
+                <div class="form-group">
+                    <label>招标人</label>
+                    <input type="text" class="form-control" id="bidBidder" placeholder="招标人名称">
+                </div>
             </div>
+            <!-- 第五行：项目概况 + 招标范围（两列） -->
             <div class="form-row">
                 <div class="form-group">
                     <label>项目概况</label>
@@ -1158,6 +1177,7 @@
                     <textarea class="form-control" id="bidScope" rows="2" placeholder="招标范围描述"></textarea>
                 </div>
             </div>
+            <!-- 第六行：线路类型 + 线路长度 + 站点数 -->
             <div class="form-row-3">
                 <div class="form-group">
                     <label>线路类型</label>
@@ -1172,6 +1192,22 @@
                     <input type="number" class="form-control" id="bidTotalStations" step="1">
                 </div>
             </div>
+            <!-- 第七行：地下站 + 高架站 + 地面站 -->
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label>地下站（座）</label>
+                    <input type="number" class="form-control" id="bidUndergroundStations" step="1" placeholder="地下站数量">
+                </div>
+                <div class="form-group">
+                    <label>高架站（座）</label>
+                    <input type="number" class="form-control" id="bidElevatedStations" step="1" placeholder="高架站数量">
+                </div>
+                <div class="form-group">
+                    <label>地面站（座）</label>
+                    <input type="number" class="form-control" id="bidGroundStations" step="1" placeholder="地面站数量">
+                </div>
+            </div>
+            <!-- 第八行：GOA等级 + 制式模式 + 开通站点数 -->
             <div class="form-row-3">
                 <div class="form-group">
                     <label>GOA等级</label>
@@ -1188,18 +1224,53 @@
                     <input type="text" class="form-control" id="bidSystemMode" placeholder="如：CBTC/互联互通">
                 </div>
                 <div class="form-group">
-                    <label>控制价（万元）</label>
-                    <input type="text" class="form-control" id="bidControlPrice" placeholder="如：30000">
+                    <label>开通站点数（座）</label>
+                    <input type="number" class="form-control" id="bidOpenedStations" step="1" placeholder="开通站点数量">
                 </div>
             </div>
-            <div class="form-row">
+            <!-- 第九行：包含系统 + 招标门槛 + 资金来源 -->
+            <div class="form-row-3">
                 <div class="form-group">
-                    <label>备注</label>
-                    <textarea class="form-control" id="bidNotes" rows="2" placeholder="其他备注信息"></textarea>
+                    <label>包含系统</label>
+                    <input type="text" class="form-control" id="bidSubsystems" placeholder="如：通信/PIS/信号">
                 </div>
                 <div class="form-group">
+                    <label>招标门槛</label>
+                    <input type="text" class="form-control" id="bidThreshold" placeholder="招标门槛描述">
+                </div>
+                <div class="form-group">
+                    <label>资金来源</label>
+                    <input type="text" class="form-control" id="bidFundingSource" placeholder="如：政府投资/BOT">
+                </div>
+            </div>
+            <!-- 第十行：评标方法 + 设计单位 + 平台软件(PIS) -->
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label>评标方法</label>
+                    <input type="text" class="form-control" id="bidEvaluationMethod" placeholder="如：综合评估法">
+                </div>
+                <div class="form-group">
+                    <label>设计单位</label>
+                    <input type="text" class="form-control" id="bidDesignUnit" placeholder="设计单位名称">
+                </div>
+                <div class="form-group">
+                    <label>平台软件(PIS)</label>
+                    <input type="text" class="form-control" id="bidPlatformSoftwarePis" placeholder="采用的平台软件">
+                </div>
+            </div>
+            <!-- 第十一行：招标链接 + 中标链接 + 备注 -->
+            <div class="form-row-3">
+                <div class="form-group">
                     <label>招标链接</label>
-                    <input type="text" class="form-control" id="bidLink" placeholder="招标公告URL">
+                    <input type="text" class="form-control" id="bidTenderLink" placeholder="招标公告URL">
+                </div>
+                <div class="form-group">
+                    <label>中标链接</label>
+                    <input type="text" class="form-control" id="bidLink" placeholder="中标公告URL">
+                </div>
+                <div class="form-group">
+                    <label>备注</label>
+                    <textarea class="form-control" id="bidNotes" rows="1" placeholder="备注信息"></textarea>
                 </div>
             </div>
         </div>
@@ -3007,10 +3078,8 @@ async function loadBidRecords(page) {
 
         const rows = d.items.map((item, i) => {
             const amount = item.bid_amount ? formatMoney(item.bid_amount) : '-';
-            const ctrlPrice = item.control_price ? formatMoney(item.control_price) : '-';
             const catColors = {'信号':'badge-danger','综合监控':'badge-info','通信':'badge-success','安防':'badge-warning','弱电':'badge-secondary','PPP':'badge-primary','大总包':'badge-dark','施工总包':'badge-dark','BOT':'badge-primary','消防':'badge-warning','线网':'badge-info','其他':'badge-secondary'};
             const catBadge = item.category ? `<span class="badge ${catColors[item.category]||'badge-secondary'}">${escapeHtml(item.category)}</span>` : '';
-            const notes = item.notes ? escapeHtml(item.notes.length > 30 ? item.notes.substring(0,30)+'...' : item.notes) : '-';
             return `<tr>
                 <td>${(d.page - 1) * d.per_page + i + 1}</td>
                 <td>${catBadge}</td>
@@ -3018,9 +3087,8 @@ async function loadBidRecords(page) {
                 <td>${escapeHtml(item.city || '')}</td>
                 <td class="td-break" style="max-width:150px">${escapeHtml(item.winner || '')}</td>
                 <td style="text-align:right">${amount}</td>
-                <td style="text-align:right">${ctrlPrice}</td>
                 <td>${item.bid_date || '-'}</td>
-                <td class="td-break" style="max-width:200px" title="${escapeHtml(item.notes || '')}">${notes}</td>
+                <td class="td-break" style="max-width:180px" title="${escapeHtml(item.notes || '')}">${escapeHtml(item.notes ? (item.notes.length > 25 ? item.notes.substring(0,25)+'...' : item.notes) : '-')}</td>
                 <td>
                     <span class="link-actions">
                         <button onclick="viewBidDetail('${item.record_id}')">详情</button>
@@ -3034,7 +3102,7 @@ async function loadBidRecords(page) {
         document.getElementById('bidRecordsTable').innerHTML = `
             <table style="min-width:1200px">
                 <thead><tr>
-                    <th>#</th><th>分类</th><th>项目名称</th><th>城市</th><th>中标单位</th><th style="text-align:right">中标金额（万元）</th><th style="text-align:right">控制价（万元）</th><th>中标日期</th><th>备注</th><th>操作</th>
+                    <th>#</th><th>工程分类</th><th>项目名称</th><th>城市</th><th>中标单位</th><th style="text-align:right">中标金额（万元）</th><th>中标日期</th><th>备注</th><th>操作</th>
                 </tr></thead>
                 <tbody>${rows}</tbody>
             </table>
@@ -3081,25 +3149,22 @@ function openBidModal(editId) {
     document.getElementById('bidModalTitle').textContent = editId ? '编辑中标记录' : '新增中标记录';
     // 清空表单
     if (!editId) {
-        document.getElementById('bidProjectName').value = '';
-        document.getElementById('bidCategory').value = '';
-        document.getElementById('bidDate').value = '';
-        document.getElementById('bidProvince').value = '';
-        document.getElementById('bidCity').value = '';
-        document.getElementById('bidWinner').value = '';
-        document.getElementById('bidConsortium').value = '';
-        document.getElementById('bidAmount').value = '';
-        document.getElementById('bidIsOpened').value = '';
-        document.getElementById('bidOverview').value = '';
-        document.getElementById('bidScope').value = '';
-        document.getElementById('bidLineType').value = '';
-        document.getElementById('bidLengthKm').value = '';
-        document.getElementById('bidTotalStations').value = '';
-        document.getElementById('bidGoaLevel').value = '';
-        document.getElementById('bidSystemMode').value = '';
-        document.getElementById('bidControlPrice').value = '';
-        document.getElementById('bidNotes').value = '';
-        document.getElementById('bidLink').value = '';
+        const fields = [
+            'bidProjectName','bidCategory','bidDate','bidProvince','bidCity',
+            'bidWinner','bidConsortium','bidAmount','bidControlPrice',
+            'bidIsOpened','bidOpeningDate','bidBidder',
+            'bidOverview','bidScope',
+            'bidLineType','bidLengthKm','bidTotalStations',
+            'bidUndergroundStations','bidElevatedStations','bidGroundStations',
+            'bidGoaLevel','bidSystemMode','bidOpenedStations',
+            'bidSubsystems','bidThreshold','bidFundingSource',
+            'bidEvaluationMethod','bidDesignUnit','bidPlatformSoftwarePis',
+            'bidTenderLink','bidLink','bidNotes'
+        ];
+        fields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
     }
     document.getElementById('bidModal').classList.add('active');
 }
@@ -3110,25 +3175,50 @@ async function editBidRecord(recordId) {
         if (!res.success) throw new Error(res.error);
         const d = res.data;
         openBidModal(recordId);
-        document.getElementById('bidProjectName').value = d.project_name || '';
-        document.getElementById('bidCategory').value = d.category || '';
-        document.getElementById('bidDate').value = d.bid_date || '';
-        document.getElementById('bidProvince').value = d.province || '';
-        document.getElementById('bidCity').value = d.city || '';
-        document.getElementById('bidWinner').value = d.winner || '';
-        document.getElementById('bidConsortium').value = d.consortium || '';
-        document.getElementById('bidAmount').value = d.bid_amount ? d.bid_amount : '';
-        document.getElementById('bidIsOpened').value = d.is_opened || '';
-        document.getElementById('bidOverview').value = d.project_overview || '';
-        document.getElementById('bidScope').value = d.bid_scope || '';
-        document.getElementById('bidLineType').value = d.line_type || '';
-        document.getElementById('bidLengthKm').value = d.length_km || '';
-        document.getElementById('bidTotalStations').value = d.total_stations || '';
-        document.getElementById('bidGoaLevel').value = d.goa_level || '';
-        document.getElementById('bidSystemMode').value = d.system_mode || '';
-        document.getElementById('bidControlPrice').value = d.control_price || '';
-        document.getElementById('bidNotes').value = d.notes || '';
-        document.getElementById('bidLink').value = d.bid_link || '';
+
+        // 填充所有字段（前端显示名 → 后端字段名）
+        const fieldMap = {
+            'bidProjectName': 'project_name',
+            'bidCategory': 'category',
+            'bidDate': 'bid_date',
+            'bidProvince': 'province',
+            'bidCity': 'city',
+            'bidWinner': 'winner',
+            'bidConsortium': 'consortium',
+            'bidAmount': 'bid_amount',
+            'bidControlPrice': 'control_price',
+            'bidIsOpened': 'is_opened',
+            'bidOpeningDate': 'opening_date',
+            'bidBidder': 'bidder',
+            'bidOverview': 'project_overview',
+            'bidScope': 'bid_scope',
+            'bidLineType': 'line_type',
+            'bidLengthKm': 'length_km',
+            'bidTotalStations': 'total_stations',
+            'bidUndergroundStations': 'underground_stations',
+            'bidElevatedStations': 'elevated_stations',
+            'bidGroundStations': 'ground_stations',
+            'bidGoaLevel': 'goa_level',
+            'bidSystemMode': 'system_mode',
+            'bidOpenedStations': 'opened_stations',
+            'bidSubsystems': 'subsystems',
+            'bidThreshold': 'bid_threshold',
+            'bidFundingSource': 'funding_source',
+            'bidEvaluationMethod': 'evaluation_method',
+            'bidDesignUnit': 'design_unit',
+            'bidPlatformSoftwarePis': 'platform_software_pis',
+            'bidTenderLink': 'tender_link',
+            'bidLink': 'bid_link',
+            'bidNotes': 'notes'
+        };
+
+        for (const [elId, fieldName] of Object.entries(fieldMap)) {
+            const el = document.getElementById(elId);
+            if (!el) continue;
+            let val = d[fieldName];
+            if (val === null || val === undefined) val = '';
+            el.value = val;
+        }
     } catch(e) {
         toast('加载记录失败: ' + e.message, 'error');
     }
@@ -3144,8 +3234,8 @@ async function saveBidRecord() {
     // 中标金额：直接存储万元值
     const amountStr = document.getElementById('bidAmount').value.trim();
     const bidAmount = amountStr ? parseFloat(amountStr) : null;
-    const ctrlPriceStr = document.getElementById('bidControlPrice').value.trim();
-    const controlPrice = ctrlPriceStr ? parseFloat(ctrlPriceStr) : null;
+    const controlPriceStr = document.getElementById('bidControlPrice').value.trim();
+    const controlPrice = controlPriceStr ? parseFloat(controlPriceStr) : null;
 
     const payload = {
         project_name: projectName,
@@ -3155,18 +3245,31 @@ async function saveBidRecord() {
         winner: document.getElementById('bidWinner').value.trim(),
         consortium: document.getElementById('bidConsortium').value.trim(),
         bid_amount: bidAmount,
+        control_price: controlPrice,
         bid_date: document.getElementById('bidDate').value,
         is_opened: document.getElementById('bidIsOpened').value,
+        opening_date: document.getElementById('bidOpeningDate').value,
+        bidder: document.getElementById('bidBidder').value.trim(),
         project_overview: document.getElementById('bidOverview').value.trim(),
         bid_scope: document.getElementById('bidScope').value.trim(),
         line_type: document.getElementById('bidLineType').value.trim(),
         length_km: document.getElementById('bidLengthKm').value ? parseFloat(document.getElementById('bidLengthKm').value) : null,
         total_stations: document.getElementById('bidTotalStations').value ? parseInt(document.getElementById('bidTotalStations').value) : null,
+        underground_stations: document.getElementById('bidUndergroundStations').value ? parseInt(document.getElementById('bidUndergroundStations').value) : null,
+        elevated_stations: document.getElementById('bidElevatedStations').value ? parseInt(document.getElementById('bidElevatedStations').value) : null,
+        ground_stations: document.getElementById('bidGroundStations').value ? parseInt(document.getElementById('bidGroundStations').value) : null,
         goa_level: document.getElementById('bidGoaLevel').value,
         system_mode: document.getElementById('bidSystemMode').value.trim(),
-        control_price: controlPrice,
-        notes: document.getElementById('bidNotes').value.trim(),
+        opened_stations: document.getElementById('bidOpenedStations').value ? parseInt(document.getElementById('bidOpenedStations').value) : null,
+        subsystems: document.getElementById('bidSubsystems').value.trim(),
+        bid_threshold: document.getElementById('bidThreshold').value.trim(),
+        funding_source: document.getElementById('bidFundingSource').value.trim(),
+        evaluation_method: document.getElementById('bidEvaluationMethod').value.trim(),
+        design_unit: document.getElementById('bidDesignUnit').value.trim(),
+        platform_software_pis: document.getElementById('bidPlatformSoftwarePis').value.trim(),
+        tender_link: document.getElementById('bidTenderLink').value.trim(),
         bid_link: document.getElementById('bidLink').value.trim(),
+        notes: document.getElementById('bidNotes').value.trim(),
     };
 
     try {
@@ -3195,7 +3298,6 @@ async function viewBidDetail(recordId) {
         if (!res.success) throw new Error(res.error);
         const d = res.data;
         const amount = d.bid_amount ? formatMoney(d.bid_amount) + ' 万元' : '-';
-        const ctrl = d.control_price ? formatMoney(d.control_price) + ' 万元' : '-';
         document.getElementById('bidDetailContent').innerHTML = `
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 20px;font-size:14px">
                 <div><b>项目名称：</b>${escapeHtml(d.project_name || '-')}</div>
@@ -3206,18 +3308,16 @@ async function viewBidDetail(recordId) {
                 <div><b>中标单位：</b>${escapeHtml(d.winner || '-')}</div>
                 <div><b>联合体：</b>${escapeHtml(d.consortium || '-')}</div>
                 <div><b>中标金额：</b>${amount}</div>
-                <div><b>控制价：</b>${ctrl}</div>
                 <div><b>开通状态：</b>${escapeHtml(d.is_opened || '-')}</div>
                 <div><b>线路类型：</b>${escapeHtml(d.line_type || '-')}</div>
                 <div><b>线路长度：</b>${d.length_km ? d.length_km + ' km' : '-'}</div>
                 <div><b>站点数：</b>${d.total_stations || '-'}</div>
                 <div><b>GOA等级：</b>${escapeHtml(d.goa_level || '-')}</div>
                 <div><b>制式模式：</b>${escapeHtml(d.system_mode || '-')}</div>
+                <div><b>备注：</b>${escapeHtml(d.notes || '-')}</div>
             </div>
             <div style="margin-top:16px;font-size:14px">
                 <div style="margin-bottom:8px"><b>项目概况：</b>${escapeHtml(d.project_overview || '-')}</div>
-                <div style="margin-bottom:8px"><b>招标范围：</b>${escapeHtml(d.bid_scope || '-')}</div>
-                <div style="margin-bottom:8px"><b>备注：</b>${escapeHtml(d.notes || '-')}</div>
                 ${d.bid_link ? `<div><b>招标链接：</b><a href="${escapeHtml(d.bid_link)}" target="_blank" style="color:var(--primary)">${escapeHtml(d.bid_link)}</a></div>` : ''}
             </div>
             <div style="margin-top:12px;font-size:12px;color:var(--text-secondary)">数据来源: ${escapeHtml(d.data_source || 'manual')} | 创建时间: ${d.created_at || '-'} | record_id: ${d.record_id}</div>
@@ -3594,3 +3694,4 @@ loadDashboard();
 </script>
 </body>
 </html>
+

@@ -882,7 +882,7 @@ class WebServer:
 
         @app.route("/api/bid-records/<record_id>", methods=["PUT"])
         def api_bid_record_update(record_id):
-            """更新中标记录"""
+            """更新中标记录（全字段更新）"""
             try:
                 data = request.json
                 if not data:
@@ -891,13 +891,11 @@ class WebServer:
                 config = self._load_config()
                 db = self._get_db(config)
 
-                # 不允许通过 API 修改 record_id 和 project_name（影响去重主键）
+                # 不允许通过 API 修改 record_id
                 data.pop("record_id", None)
-                # 如果修改了 project_name 或 bid_date，需要重新计算 record_id
-                # 但这涉及主键变更，暂不允许
-                data.pop("project_name", None)
-                data.pop("bid_date", None)
 
+                # 如果修改了 project_name 或 bid_date，需重新计算 record_id
+                # 后端 update_bid_record 中处理重新生成 record_id
                 success = db.update_bid_record(record_id, data)
                 if not success:
                     return jsonify({"success": False, "error": "记录不存在"}), 404

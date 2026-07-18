@@ -1049,7 +1049,7 @@ class Database:
             return {row[0] for row in rows}
 
     def update_bid_record(self, record_id: str, fields: Dict) -> bool:
-        """更新中标记录的指定字段
+        """更新中标记录的指定字段（全字段编辑，支持修改 project_name/bid_date 后自动重算 record_id）
 
         Args:
             record_id: 记录唯一ID
@@ -1058,20 +1058,66 @@ class Database:
         Returns:
             True 表示更新成功，False 表示记录不存在
         """
-        # 不允许修改 record_id
+        # 防止修改 record_id 自身
         fields.pop("record_id", None)
         if not fields:
             return False
 
-        fields["updated_at"] = datetime.now().isoformat()
-        set_clause = ",".join(f"{k} = ?" for k in fields.keys())
-        params = list(fields.values()) + [record_id]
+        # 如果修改了 project_name 或 bid_date，需重新生成 record_id
+        new_project = fields.get("project_name")
+        new_bid_date = fields.get("bid_date")
 
-        with self._get_conn() as conn:
-            result = conn.execute(
-                f"UPDATE bid_records SET {set_clause} WHERE record_id = ?", params
+        # 获取当前记录（用于重新计算 record_id 以及合并更新数据）
+        current = self.get_bid_record(record_id)
+        if not current:
+            return False
+
+        # 如果提交了 project_name 或 bid_date，重新计算 record_id
+        if new_project is not None or new_bid_date is not None:
+            effective_project = new_project if new_project is not None else current.get("project_name", "")
+            effective_date = new_bid_date if new_bid_date is not None else current.get("bid_date", "")
+            new_record_id = generate_item_id(
+                effective_project or "",
+                effective_date or ""
             )
-            return result.rowcount > 0
+            # 如果新 record_id 与旧的不同，需要删除旧记录并插入新记录
+            if new_record_id != record_id:
+                fields["record_id"] = new_record_id
+
+        fields["updated_at"] = datetime.now().isoformat()
+
+        # 如果 record_id 改变了，需要先删旧记录再插新记录
+        if "record_id" in fields:
+            new_id = fields.pop("record_id")
+            with self._get_conn() as conn:
+                # 检查新 ID 是否已存在
+                existing = conn.execute(
+                    "SELECT record_id FROM bid_records WHERE record_id = ?", (new_id,)
+                ).fetchone()
+                if existing:
+                    # 新 ID 已存在，则合并更新
+                    set_clause = ",".join(f"{k} = ?" for k in fields.keys())
+                    params = list(fields.values()) + [new_id]
+                    conn.execute(f"UPDATE bid_records SET {set_clause} WHERE record_id = ?", params)
+                else:
+                    # 新 ID 不存在，删除旧记录，创建新记录
+                    conn.execute("DELETE FROM bid_records WHERE record_id = ?", (record_id,))
+                    # 将当前记录的字段与新字段合并
+                    merged = dict(current)
+                    merged.update(fields)
+                    merged["record_id"] = new_id
+                    cols = ",".join(merged.keys())
+                    placeholders = ",".join("?" for _ in merged)
+                    conn.execute(f"INSERT INTO bid_records ({cols}) VALUES ({placeholders})", list(merged.values()))
+                return True
+        else:
+            set_clause = ",".join(f"{k} = ?" for k in fields.keys())
+            params = list(fields.values()) + [record_id]
+            with self._get_conn() as conn:
+                result = conn.execute(
+                    f"UPDATE bid_records SET {set_clause} WHERE record_id = ?", params
+                )
+                return result.rowcount > 0
 
     def delete_bid_record(self, record_id: str) -> bool:
         """删除中标记录
