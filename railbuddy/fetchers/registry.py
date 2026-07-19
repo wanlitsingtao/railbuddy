@@ -75,7 +75,7 @@ class FetcherManager:
         else:
             logger.warning(f"未知的抓取器类型: {fetcher_type}，跳过: {config.get('name')}")
 
-    def fetch_all(self, db: Database) -> List[BidItem]:
+    def fetch_all(self, db: Database, date_from: str = None, date_to: str = None) -> List[BidItem]:
         """执行全量抓取
 
         工作流程：
@@ -86,6 +86,11 @@ class FetcherManager:
         5. 保存新条目到数据库
         6. 收集里程数据（如果抓取器支持）
         7. 更新抓取状态
+
+        Args:
+            db: Database 实例
+            date_from: 可选，信息发布时间范围起始（如 "2024-07-01"）
+            date_to: 可选，信息发布时间范围结束
 
         Returns:
             新发现的、未发送的条目列表
@@ -99,19 +104,54 @@ class FetcherManager:
                 continue
 
             try:
-                # 获取上次抓取时间（增量抓取的关键）
-                since_time = db.get_last_fetch_time(fetcher.name)
-                if since_time:
-                    logger.info(f"[{fetcher.name}] 增量抓取（自 {since_time} 起）")
-                elif self.max_age_days > 0:
-                    # 首次抓取但配置了 max_age_days：只取最近 N 天
-                    since_time = (datetime.now() - timedelta(days=self.max_age_days)).isoformat()
-                    logger.info(f"[{fetcher.name}] 首次抓取（限最近 {self.max_age_days} 天，自 {since_time[:10]} 起）")
+                end_time = None
+                # 如果指定了时间范围，优先使用用户指定的时间范围
+                if date_from:
+                    since_time = date_from
+                    if date_to:
+                        # 增加一天，使 end_time 包含 date_to 当天
+                        try:
+                            dt_end = datetime.strptime(date_to, "%Y-%m-%d") + timedelta(days=1)
+                            end_time = dt_end.isoformat()
+                        except ValueError:
+                            end_time = None
+                    else:
+                        end_time = None
+                    logger.info(f"[{fetcher.name}] 按时间区间抓取: {date_from} ~ {date_to or '不限'}")
                 else:
-                    logger.info(f"[{fetcher.name}] 首次抓取（全量）")
+                    # 获取上次抓取时间（增量抓取的关键）
+                    since_time = db.get_last_fetch_time(fetcher.name)
+                    if since_time:
+                        logger.info(f"[{fetcher.name}] 增量抓取（自 {since_time} 起）")
+                    elif self.max_age_days > 0:
+                        # 首次抓取但配置了 max_age_days：只取最近 N 天
+                        since_time = (datetime.now() - timedelta(days=self.max_age_days)).isoformat()
+                        logger.info(f"[{fetcher.name}] 首次抓取（限最近 {self.max_age_days} 天，自 {since_time[:10]} 起）")
+                    else:
+                        logger.info(f"[{fetcher.name}] 首次抓取（全量）")
 
                 # 执行抓取
                 items = fetcher.fetch(since_time=since_time)
+
+                # 如果指定了结束时间，按 publish_date 过滤
+                if end_time:
+                    before_count = len(items)
+                    filtered_items = []
+                    for item in items:
+                        pub_date = getattr(item, "publish_date", None)
+                        if pub_date:
+                            try:
+                                dt = datetime.strptime(pub_date, "%Y-%m-%d")
+                                # end_time 已经是 date_to + 1天，所以用 < 比较
+                                if dt < datetime.fromisoformat(end_time):
+                                    filtered_items.append(item)
+                            except (ValueError, TypeError):
+                                filtered_items.append(item)  # 日期无法解析则保留
+                        else:
+                            filtered_items.append(item)  # 无日期则保留
+                    items = filtered_items
+                    if len(items) < before_count:
+                        logger.info(f"[{fetcher.name}] 按结束时间过滤: {before_count} → {len(items)} 条")
 
                 # 限制单源最大条目数
                 if len(items) > self.max_items_per_source:
@@ -130,12 +170,19 @@ class FetcherManager:
                     )
 
                 # 去重 + 保存
+                # 当指定时间范围时，对 items 表中已存在的记录也进行覆盖保存（确保 bid_raw 可以提取到）
                 new_count = 0
                 for item in items:
                     if not db.is_item_exists(item.item_id):
                         db.save_item(item)
-                        all_new_items.append(item)
+                        if item not in all_new_items:
+                            all_new_items.append(item)
                         new_count += 1
+                    elif date_from:
+                        # 使用时间范围抓取时，即使 item 已存在也重新保存（更新内容）
+                        db.save_item(item)
+                        if item not in all_new_items:
+                            all_new_items.append(item)
 
                 # 收集里程数据（如果抓取器支持）
                 if hasattr(fetcher, 'mileage_records') and fetcher.mileage_records:
@@ -178,6 +225,8 @@ class FetcherManager:
         1. 从 new_items 中筛选出中标类条目（category='中标' 或标题含中标关键词）
         2. 解析标题/描述，提取：项目名称、中标单位、金额、城市、分类等
         3. 去重后写入 bid_raw 表
+
+        分类映射使用数据库 bid_categories 表中可配置的关键词。
         """
         if not new_items:
             return
@@ -191,20 +240,8 @@ class FetcherManager:
             "招标计划", "变更公告", "澄清", "更正", "补充公告", "终止公告",
         ]
 
-        # 工程分类关键词映射
-        CATEGORY_KEYWORDS = {
-            "信号": ["信号系统", "信号", "CBTC", "联锁系统", "计算机联锁", "ATP", "ATO", "ATS"],
-            "通信": ["通信系统", "通信", "传输系统", "无线通信", "TETRA", "LTE-M", "5G-R",
-                     "广播系统", "乘客信息", "PIS", "时钟系统", "电话系统"],
-            "综合监控": ["综合监控", "ISCS", "环境监控", "BAS", "FAS", "SCADA", "电力监控"],
-            "安防": ["安防", "安检", "安全检查", "视频监控", "CCTV", "门禁", "入侵检测",
-                    "AFC", "自动售检票", "售检票系统", "清分系统"],
-            "消防": ["消防", "气体灭火", "水消防", "火灾报警"],
-            "弱电": ["弱电系统", "弱电", "综合布线", "网络系统", "电源系统", "UPS"],
-            "施工总包": ["施工总承包", "施工总包", "工程总承包", "EPC"],
-            "大总包": ["设备集成", "系统集成", "总包", "总集成", "机电总承包"],
-            "PPP": ["PPP", "政府和社会资本", "特许经营", "BOT"],
-        }
+        # 从数据库获取可配置的分类→关键词映射
+        CATEGORY_KEYWORDS = db.get_bid_category_keywords_map()
 
         # 金额提取正则
         AMOUNT_PATTERNS = [
@@ -348,16 +385,19 @@ class FetcherManager:
 
     def _map_bid_category(self, title: str, desc: str,
                           category_keywords: Dict) -> str:
-        """根据标题+描述关键词映射到工程分类"""
+        """根据标题+描述关键词映射到工程分类
+
+        使用从数据库 bid_categories 表加载的可配置分类关键词映射。
+        如果未匹配到任何分类，则返回"其他"。
+        """
         text = f"{title} {desc}"
         for cat, keywords in category_keywords.items():
             for kw in keywords:
                 if kw in text:
                     return cat
-        if "监控" in text:
-            return "综合监控"
-        if "安防" in text:
-            return "安防"
+        # 通用后备匹配规则（仅当数据库配置中无匹配时使用）
+        if "监控" in text and "监控系统" not in [k for kw in category_keywords.values() for k in kw]:
+            return "综合监控系统(ISCS)"
         if "施工" in text or "土建" in text:
             return "施工总包"
         return "其他"

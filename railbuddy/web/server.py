@@ -416,6 +416,72 @@ class WebServer:
                 logger.error(f"Categories API error: {e}", exc_info=True)
                 return jsonify({"success": False, "error": str(e)}), 500
 
+        # ---- 中标抓取分类管理（可配置的抓取条件） ----
+        @app.route("/api/bid-categories", methods=["GET"])
+        def api_bid_categories_list():
+            """获取所有中标抓取分类配置"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+                categories = db.get_bid_categories_config()
+                return jsonify({"success": True, "data": categories})
+            except Exception as e:
+                logger.error(f"Bid categories list error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/bid-categories", methods=["POST"])
+        def api_bid_categories_add():
+            """新增中标抓取分类"""
+            try:
+                data = request.json
+                if not data or not data.get("name"):
+                    return jsonify({"success": False, "error": "分类名称不能为空"}), 400
+                config = self._load_config()
+                db = self._get_db(config)
+                cat_id = db.add_bid_category(
+                    name=data["name"],
+                    keywords=data.get("keywords", ""),
+                    description=data.get("description", ""),
+                    display_order=int(data.get("display_order", 0))
+                )
+                if cat_id:
+                    return jsonify({"success": True, "data": {"id": cat_id}})
+                return jsonify({"success": False, "error": "添加失败，可能名称已存在"}), 400
+            except Exception as e:
+                logger.error(f"Bid categories add error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/bid-categories/<int:cat_id>", methods=["PUT"])
+        def api_bid_categories_update(cat_id):
+            """更新中标抓取分类"""
+            try:
+                data = request.json
+                if not data:
+                    return jsonify({"success": False, "error": "请求数据不能为空"}), 400
+                config = self._load_config()
+                db = self._get_db(config)
+                ok = db.update_bid_category(cat_id, data)
+                if ok:
+                    return jsonify({"success": True})
+                return jsonify({"success": False, "error": "更新失败"}), 400
+            except Exception as e:
+                logger.error(f"Bid categories update error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/bid-categories/<int:cat_id>", methods=["DELETE"])
+        def api_bid_categories_delete(cat_id):
+            """删除中标抓取分类"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+                ok = db.delete_bid_category(cat_id)
+                if ok:
+                    return jsonify({"success": True})
+                return jsonify({"success": False, "error": "删除失败"}), 400
+            except Exception as e:
+                logger.error(f"Bid categories delete error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
         @app.route("/api/items")
         def api_items():
             try:
@@ -601,12 +667,19 @@ class WebServer:
             try:
                 config = self._load_config()
                 db = self._get_db(config)
+
+                # 支持时间范围参数：信息发布时间区间
+                data = request.json or {}
+                date_from = data.get("date_from") or None
+                date_to = data.get("date_to") or None
+
                 fetcher_mgr = FetcherManager(
                     sources_config=config.sources,
                     wechat_sources_config=config.wechat_sources,
-                    max_items_per_source=config.max_items_per_source
+                    max_items_per_source=config.max_items_per_source,
+                    max_age_days=0  # 手动抓取不限制历史天数
                 )
-                new_items = fetcher_mgr.fetch_all(db)
+                new_items = fetcher_mgr.fetch_all(db, date_from=date_from, date_to=date_to)
 
                 # 检查是否启用自动发送
                 auto_send = config.schedule_config.get("auto_send", True)
@@ -1394,19 +1467,61 @@ class WebServer:
 
         @app.route("/api/bid-dynamic/transfer", methods=["POST"])
         def api_bid_dynamic_transfer():
-            """将选中的中标动态记录提取到中标数据表（bid_records）"""
+            """将选中的中标动态记录提取到中标数据表（bid_records）
+
+            支持两步流程：
+            1. 先检查重复（force=false），返回重复记录详情
+            2. 用户确认后，再次请求携带 force=true 执行写入
+            """
             try:
                 data = request.json
                 if not data or not data.get("record_ids"):
                     return jsonify({"success": False, "error": "请选择要提取的记录"}), 400
 
+                record_ids = data["record_ids"]
+                force = data.get("force", False)
+
                 config = self._load_config()
                 db = self._get_db(config)
-                result = db.transfer_bid_raw_to_records(data["record_ids"])
+                result = db.transfer_bid_raw_to_records(record_ids, force=force)
 
+                duplicates = result.get("duplicates", [])
+
+                # 如果检测到重复且用户未确认
+                if duplicates and not force:
+                    return jsonify({
+                        "success": False,
+                        "has_duplicates": True,
+                        "message": f"检测到 {len(duplicates)} 条重复记录，请确认是否覆盖",
+                        "data": {
+                            "duplicate_count": len(duplicates),
+                            "duplicates": [
+                                {
+                                    "record_id": d.get("record_id", ""),
+                                    "project_name": d.get("project_name", ""),
+                                    "winner": d.get("winner", ""),
+                                    "bid_date": d.get("bid_date", ""),
+                                    "bid_amount": d.get("bid_amount"),
+                                    "category": d.get("category", ""),
+                                    "_existing_record": {
+                                        "project_name": d.get("_existing_record", {}).get("project_name", ""),
+                                        "winner": d.get("_existing_record", {}).get("winner", ""),
+                                        "bid_date": d.get("_existing_record", {}).get("bid_date", ""),
+                                        "bid_amount": d.get("_existing_record", {}).get("bid_amount"),
+                                    }
+                                }
+                                for d in duplicates
+                            ]
+                        }
+                    })
+
+                # 无重复，或用户已确认强制覆盖
                 return jsonify({
                     "success": True,
-                    "message": f"提取完成: {result['transferred']} 条已提取, {result['skipped']} 条跳过",
+                    "message": (
+                        f"提取完成: {result['transferred']} 条已提取, "
+                        f"{result['skipped']} 条跳过"
+                    ),
                     "data": result
                 })
             except Exception as e:

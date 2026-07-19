@@ -602,6 +602,7 @@
             <li data-page="bid-dynamic"><span class="icon">📡</span> 中标动态</li>
             <li data-page="mileage"><span class="icon">📈</span> 里程统计</li>
             <li data-page="logs"><span class="icon">📧</span> 发送日志</li>
+            <li data-page="bid-categories"><span class="icon">🎯</span> 抓取条件</li>
             <li data-page="email"><span class="icon">✉️</span> 邮箱设置</li>
             <li data-page="schedule"><span class="icon">⏰</span> 调度设置</li>
         </ul>
@@ -615,7 +616,13 @@
                 <h2>仪表盘</h2>
                 <div class="desc">系统状态总览</div>
             </div>
-            <div class="action-bar">
+            <div class="action-bar" style="flex-wrap:wrap">
+                <div style="display:flex;align-items:center;gap:6px;margin-right:12px">
+                    <span style="font-size:13px;color:var(--text-secondary)">发布时间：</span>
+                    <input type="date" id="fetchDateFrom" style="height:32px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px">
+                    <span style="font-size:13px;color:var(--text-secondary)">~</span>
+                    <input type="date" id="fetchDateTo" style="height:32px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px">
+                </div>
                 <button class="btn btn-primary" onclick="fetchNow()">🔄 立即抓取</button>
                 <button class="btn btn-outline" onclick="testEmail()">✉️ 测试邮件</button>
                 <button class="btn btn-outline" onclick="loadDashboard()">🔁 刷新</button>
@@ -877,6 +884,90 @@
             </div>
             <div class="card" style="max-width:600px">
                 <div id="emailForm"><div class="loading">加载中...</div></div>
+            </div>
+        </div>
+
+        <!-- 抓取条件（中标抓取分类管理） -->
+        <div class="page" id="page-bid-categories">
+            <div class="page-header">
+                <h2>中标抓取条件配置</h2>
+                <div class="desc">配置系统抓取中标数据时关注的工程系统分类及对应的关键词。系统会根据这些条件自动匹配和分类抓取到的中标信息。</div>
+            </div>
+            <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                    <div>
+                        <span class="text-muted">共 <span id="bidCatCount">0</span> 个分类</span>
+                    </div>
+                    <button class="btn btn-primary" onclick="showBidCategoryModal()">+ 新增分类</button>
+                </div>
+                <div style="overflow-x:auto">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px">
+                        <thead>
+                            <tr style="background:var(--bg-secondary)">
+                                <th style="padding:10px 12px;text-align:left;width:40px">排序</th>
+                                <th style="padding:10px 12px;text-align:left">分类名称</th>
+                                <th style="padding:10px 12px;text-align:left">关键词</th>
+                                <th style="padding:10px 12px;text-align:left;width:80px">状态</th>
+                                <th style="padding:10px 12px;text-align:left;width:80px">描述</th>
+                                <th style="padding:10px 12px;text-align:center;width:120px">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bidCategoryTableBody">
+                            <tr><td colspan="6" style="text-align:center;padding:30px;color:#999">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card" style="margin-top:16px;background:var(--bg-secondary);padding:16px;border-radius:8px">
+                <h4 style="margin:0 0 8px 0">💡 使用说明</h4>
+                <ul style="margin:0;padding-left:20px;line-height:1.8;font-size:13px;color:#666">
+                    <li><strong>分类名称</strong>：工程系统分类名称，如"通信系统"、"信号系统"等，将用于中标记录的工程分类字段。</li>
+                    <li><strong>关键词</strong>：用逗号分隔。抓取到的公告标题或描述中包含任一关键词时，会自动归类到该分类。</li>
+                    <li><strong>启用/禁用</strong>：禁用的分类不会参与自动分类匹配，但仍保留配置。</li>
+                    <li><strong>排序</strong>：数字越小显示越靠前，分类匹配时按顺序优先匹配。</li>
+                    <li><strong>系统默认分类</strong>已在初始化时预置了轨道交通常见子系统分类，您可根据需要增删改查。</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 抓取条件编辑模态框 -->
+        <div class="modal-overlay" id="bidCategoryModal">
+            <div class="modal" style="max-width:600px">
+                <div class="modal-header">
+                    <h3 id="bidCategoryModalTitle">新增抓取条件</h3>
+                    <span class="modal-close" onclick="closeModal('bidCategoryModal')">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="bidCatId" value="-1">
+                    <div class="form-group">
+                        <label>分类名称 <span class="hint">(必填)</span></label>
+                        <input type="text" class="form-control" id="bidCatName" placeholder="如：通信系统">
+                    </div>
+                    <div class="form-group">
+                        <label>关键词 <span class="hint">(逗号分隔)</span></label>
+                        <textarea class="form-control" id="bidCatKeywords" rows="3" placeholder="通信系统,通信,传输系统,光传输,SDH,..."></textarea>
+                        <div class="field-help">公告标题或描述中包含任一关键词即匹配该分类。多个关键词用英文逗号分隔。</div>
+                    </div>
+                    <div class="form-group">
+                        <label>排序 <span class="hint">(数字越小越靠前)</span></label>
+                        <input type="number" class="form-control" id="bidCatOrder" value="0" min="0" style="width:100px">
+                    </div>
+                    <div class="form-group">
+                        <label>描述 <span class="hint">(可选)</span></label>
+                        <textarea class="form-control" id="bidCatDesc" rows="2" placeholder="对该分类的简要说明"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>状态</label>
+                        <select class="form-control" id="bidCatEnabled" style="width:100px">
+                            <option value="1">启用</option>
+                            <option value="0">禁用</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline" onclick="closeModal('bidCategoryModal')">取消</button>
+                    <button class="btn btn-primary" onclick="saveBidCategory()">保存</button>
+                </div>
             </div>
         </div>
 
@@ -2604,12 +2695,31 @@ function renderSystemTypeBreakdown(data) {
 
 function renderCityRanking(data) {
     // data: [{city, system_name, line_count, total_km, total_stations, first_opening, system_types, statuses}, ...]
-    let rows = data.slice(0, 50).map((c, i) => {
+    // 按城市分组，相同城市的行合并城市单元格
+    const items = data.slice(0, 50);
+    let rows = '';
+    let prevCity = null;
+    let cityRowspan = 0;
+    // 先计算每个城市的行数
+    const cityCounts = {};
+    for (const c of items) {
+        cityCounts[c.city] = (cityCounts[c.city] || 0) + 1;
+    }
+    for (let i = 0; i < items.length; i++) {
+        const c = items[i];
         const types = (c.system_types || '').split(',').filter(t => t).join('、');
-        return `
+        const isFirstInCity = (prevCity !== c.city);
+        if (isFirstInCity) {
+            cityRowspan = cityCounts[c.city] || 1;
+            prevCity = c.city;
+        }
+        const cityCell = isFirstInCity
+            ? `<td style="padding:6px 10px;font-weight:600" rowspan="${cityRowspan}">${escapeHtml(c.city)}</td>`
+            : '';
+        rows += `
             <tr style="border-bottom:1px solid var(--border)">
                 <td style="padding:6px 10px;color:var(--text-secondary)">${i + 1}</td>
-                <td style="padding:6px 10px;font-weight:600">${escapeHtml(c.city)}</td>
+                ${cityCell}
                 <td style="padding:6px 10px;color:var(--text-secondary)">${escapeHtml(c.system_name || '-')}</td>
                 <td style="padding:6px 10px;text-align:right">${c.line_count || '-'}</td>
                 <td style="padding:6px 10px;text-align:right;font-weight:600;color:var(--primary)">${c.total_km ? c.total_km.toFixed(1) : '-'} km</td>
@@ -2618,7 +2728,7 @@ function renderCityRanking(data) {
                 <td style="padding:6px 10px;color:var(--text-secondary)">${c.first_opening || '-'}</td>
             </tr>
         `;
-    }).join('');
+    }
 
     document.getElementById('cityRankingTable').innerHTML = `
         <table style="width:100%;border-collapse:collapse;font-size:13px">
@@ -3128,12 +3238,134 @@ async function saveSchedule() {
     } catch(e) { toast('保存失败: ' + e.message, 'error'); }
 }
 
+// ===== 中标抓取条件管理 =====
+async function loadBidCategories() {
+    try {
+        const res = await apiGet('/bid-categories');
+        if (!res.success) throw new Error(res.error);
+        const cats = res.data || [];
+        document.getElementById('bidCatCount').textContent = cats.length;
+        const tbody = document.getElementById('bidCategoryTableBody');
+        if (cats.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:#999">暂无分类配置，请点击"+ 新增分类"添加</td></tr>';
+            return;
+        }
+        tbody.innerHTML = cats.map(c => {
+            const kwHtml = escapeHtml(c.keywords || '');
+            const kwShort = kwHtml.length > 60 ? kwHtml.substring(0, 60) + '...' : kwHtml;
+            return `<tr>
+                <td style="padding:8px 12px;text-align:center">${c.display_order || 0}</td>
+                <td style="padding:8px 12px;font-weight:600">${escapeHtml(c.name)}</td>
+                <td style="padding:8px 12px;font-size:12px;color:#666" title="${kwHtml}">${kwShort}</td>
+                <td style="padding:8px 12px">${c.enabled ? '<span class="badge badge-success">启用</span>' : '<span class="badge badge-secondary">禁用</span>'}</td>
+                <td style="padding:8px 12px;font-size:12px;color:#999">${escapeHtml((c.description || '').substring(0, 20))}</td>
+                <td style="padding:8px 12px;text-align:center">
+                    <button class="btn btn-sm btn-outline" onclick="editBidCategory(${c.id})" style="margin-right:4px">编辑</button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteBidCategory(${c.id}, '${escapeHtml(c.name)}')">删除</button>
+                </td>
+            </tr>`;
+        }).join('');
+    } catch(e) {
+        document.getElementById('bidCategoryTableBody').innerHTML =
+            '<tr><td colspan="6" style="text-align:center;padding:30px;color:#ea4335">加载失败: ' + e.message + '</td></tr>';
+    }
+}
+
+function showBidCategoryModal(data) {
+    document.getElementById('bidCatId').value = data ? data.id : -1;
+    document.getElementById('bidCatName').value = data ? data.name : '';
+    document.getElementById('bidCatKeywords').value = data ? data.keywords : '';
+    document.getElementById('bidCatOrder').value = data ? (data.display_order || 0) : 0;
+    document.getElementById('bidCatDesc').value = data ? (data.description || '') : '';
+    document.getElementById('bidCatEnabled').value = data ? (data.enabled ? '1' : '0') : '1';
+    document.getElementById('bidCategoryModalTitle').textContent = data ? '编辑抓取条件' : '新增抓取条件';
+    document.getElementById('bidCategoryModal').classList.add('active');
+}
+
+function editBidCategory(id) {
+    // 从当前表格行数据中查找（或者重新请求）
+    apiGet('/bid-categories').then(res => {
+        if (!res.success) throw new Error(res.error);
+        const cat = (res.data || []).find(c => c.id === id);
+        if (cat) showBidCategoryModal(cat);
+        else toast('未找到该分类', 'error');
+    }).catch(e => toast('加载失败: ' + e.message, 'error'));
+}
+
+async function saveBidCategory() {
+    const id = parseInt(document.getElementById('bidCatId').value);
+    const name = document.getElementById('bidCatName').value.trim();
+    if (!name) { toast('分类名称不能为空', 'error'); return; }
+    const data = {
+        name,
+        keywords: document.getElementById('bidCatKeywords').value.trim(),
+        display_order: parseInt(document.getElementById('bidCatOrder').value) || 0,
+        description: document.getElementById('bidCatDesc').value.trim(),
+        enabled: document.getElementById('bidCatEnabled').value === '1',
+    };
+    try {
+        let res;
+        if (id > 0) {
+            res = await apiPut('/bid-categories/' + id, data);
+        } else {
+            res = await apiPost('/bid-categories', data);
+        }
+        if (res.success) {
+            toast('保存成功');
+            closeModal('bidCategoryModal');
+            loadBidCategories();
+        } else {
+            toast(res.error || '保存失败', 'error');
+        }
+    } catch(e) {
+        toast('保存失败: ' + e.message, 'error');
+    }
+}
+
+async function deleteBidCategory(id, name) {
+    if (!confirm(`确定要删除分类「${name}」吗？此操作不可恢复。`)) return;
+    try {
+        const res = await apiDelete('/bid-categories/' + id);
+        if (res.success) {
+            toast('删除成功');
+            loadBidCategories();
+        } else {
+            toast(res.error || '删除失败', 'error');
+        }
+    } catch(e) {
+        toast('删除失败: ' + e.message, 'error');
+    }
+}
+
+// 页面切换时自动加载
+document.addEventListener('DOMContentLoaded', function() {
+    // 在原有的导航点击处理中添加对 bid-categories 的支持
+    const origNavHandler = document.querySelector('.nav-menu');
+    if (origNavHandler) {
+        origNavHandler.addEventListener('click', function(e) {
+            const li = e.target.closest('li');
+            if (li && li.dataset.page === 'bid-categories') {
+                setTimeout(loadBidCategories, 100);
+            }
+        });
+    }
+});
+
 // ===== 手动操作 =====
 async function fetchNow() {
-    if (!confirm('确定立即执行一次抓取任务吗？')) return;
+    const dateFrom = document.getElementById('fetchDateFrom').value;
+    const dateTo = document.getElementById('fetchDateTo').value;
+    let confirmMsg = '确定立即执行一次抓取任务吗？';
+    if (dateFrom || dateTo) {
+        confirmMsg = `确定按时间区间抓取吗？\n发布时间：${dateFrom || '不限'} ~ ${dateTo || '不限'}\n将抓取该区间内发布的全量数据（不限数据源历史范围）。`;
+    }
+    if (!confirm(confirmMsg)) return;
     toast('正在抓取，请稍候...', 'info');
     try {
-        const res = await apiPost('/fetch-now', {});
+        const body = {};
+        if (dateFrom) body.date_from = dateFrom;
+        if (dateTo) body.date_to = dateTo;
+        const res = await apiPost('/fetch-now', body);
         if (res.success) {
             const d = res.data;
             let msg = `抓取完成：新增 ${d.new_items} 条`;
@@ -3333,7 +3565,14 @@ async function loadBidRecords(page) {
             return `<tr>
                 <td>${(d.page - 1) * d.per_page + i + 1}</td>
                 <td>${catBadge}</td>
-                <td class="td-break" style="max-width:250px">${escapeHtml(item.project_name || '')}</td>
+                <td class="td-break" style="max-width:250px">
+                    <div style="display:flex;align-items:center;gap:6px">
+                        ${item.bid_link
+                            ? `<a href="${escapeHtml(item.bid_link)}" target="_blank" title="${escapeHtml(item.project_name || '')}" style="color:var(--primary);text-decoration:none">${escapeHtml(item.project_name || '')}</a>`
+                            : `<span>${escapeHtml(item.project_name || '')}</span>`
+                        }
+                    </div>
+                </td>
                 <td>${escapeHtml(item.city || '')}</td>
                 <td class="td-break" style="max-width:150px">${escapeHtml(item.winner || '')}</td>
                 <td style="text-align:right">${amount}</td>
@@ -4001,7 +4240,14 @@ async function loadBidDynamic(page) {
 
                 html += `<tr>
                     <td><input type="checkbox" class="bidDynamicCheckbox" value="${item.record_id}" ${checked} onchange="updateBidDynamicSelected()"></td>
-                    <td><a href="javascript:void(0)" onclick="viewBidDynamicDetail('${item.record_id}')" title="${escapeHtml(item.project_name || '')}">${escapeHtml(truncateText(item.project_name, 40))}</a></td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:6px">
+                            ${item.bid_link
+                                ? `<a href="${escapeHtml(item.bid_link)}" target="_blank" title="${escapeHtml(item.project_name || '')}" style="color:var(--primary);text-decoration:none">${escapeHtml(truncateText(item.project_name, 40))}</a>`
+                                : `<a href="javascript:void(0)" onclick="viewBidDynamicDetail('${item.record_id}')" title="${escapeHtml(item.project_name || '')}" style="color:var(--text);text-decoration:none">${escapeHtml(truncateText(item.project_name, 40))}</a>`
+                            }
+                        </div>
+                    </td>
                     <td>${escapeHtml(item.category || '-')}</td>
                     <td>${escapeHtml(truncateText(item.winner || '-', 20))}</td>
                     <td>${escapeHtml(item.city || '-')}</td>
@@ -4110,6 +4356,8 @@ function updateBidDynamicCategorySelected() {
     btn.textContent = selected.length > 0 ? `分类 (${selected.length})` : '选择分类';
     // 关闭下拉
     document.getElementById('bidDynamicCategoryDropdown')?.classList.remove('show');
+    // 立即刷新数据
+    loadBidDynamic(1);
 }
 
 function selectAllDynamicCategories() {
@@ -4234,7 +4482,7 @@ function openBidDynamicModal(editId) {
             .catch(e => toast('加载记录详情失败: ' + e.message, 'error'));
     }
 
-    modal.classList.add('show');
+    modal.classList.add('active');
 }
 
 async function saveBidDynamicRecord() {
@@ -4367,17 +4615,24 @@ async function viewBidDynamicDetail(recordId) {
             ['设计单位', d.design_unit || '-'],
             ['平台软件(PIS)', d.platform_software_pis || '-'],
             ['数据来源', d.data_source || '-'],
+            ['招标链接', d.bid_link || null],
             ['备注', d.notes || '-'],
         ];
         fields.forEach(([label, value]) => {
             html += `<tr><td style="padding:6px 12px;font-weight:500;color:var(--text-secondary);width:120px;border-bottom:1px solid var(--border-color)">${label}</td>`;
-            html += `<td style="padding:6px 12px;border-bottom:1px solid var(--border-color)">${escapeHtml(String(value))}</td></tr>`;
+            let valueHtml;
+            if (label === '招标链接' && value) {
+                valueHtml = `<a href="${escapeHtml(value)}" target="_blank" style="color:var(--primary)" title="${escapeHtml(value)}">点击打开链接</a>`;
+            } else {
+                valueHtml = escapeHtml(String(value));
+            }
+            html += `<td style="padding:6px 12px;border-bottom:1px solid var(--border-color)">${valueHtml}</td></tr>`;
         });
         html += '</table></div>';
 
         // 显示在模态框中
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay show';
+        modal.className = 'modal-overlay active';
         modal.innerHTML = `<div class="modal" style="width:800px">
             <div class="modal-header">
                 <h3>中标动态详情</h3>
@@ -4401,25 +4656,82 @@ async function transferSelectedBidDynamic() {
         return;
     }
 
-    if (!confirm(`确定将选中的 ${ids.length} 条记录提取到中标数据表吗？`)) return;
+    // 第一步：先检查重复
+    const statusEl = document.getElementById('bidDynamicTransferStatus');
+    statusEl.textContent = '正在检查重复...';
 
     try {
+        // 发送请求检查重复（force=false）
         const resp = await fetch(API + '/bid-dynamic/transfer', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({record_ids: ids})
+            body: JSON.stringify({record_ids: ids, force: false})
         });
         const res = await resp.json();
-        if (res.success) {
+
+        // 如果检测到重复并且需要用户确认
+        if (res.has_duplicates) {
+            const dupCount = res.data.duplicate_count;
+            const dupList = res.data.duplicates || [];
+
+            // 构建重复记录详情展示
+            let dupHtml = dupList.map(d =>
+                `<div style="padding:4px 0;border-bottom:1px solid var(--border-color);font-size:13px">
+                    <div><b>项目:</b> ${escHtml(d.project_name || '-')}</div>
+                    <div><b>原记录:</b> ${escHtml(d._existing_record?.project_name || '-')} |
+                         中标单位: ${escHtml(d._existing_record?.winner || '-')} |
+                         金额: ${d._existing_record?.bid_amount ?? '-'}万元</div>
+                    <div style="color:var(--text-secondary);font-size:12px">
+                        bid_date: ${d.bid_date || '-'} | category: ${d.category || '-'}
+                    </div>
+                 </div>`
+            ).join('');
+
+            // 自定义确认对话框
+            if (!confirm(
+                `⚠️ 检测到 ${dupCount} 条重复记录（已在 bid_records 表中存在）\n\n` +
+                dupList.slice(0, 3).map(d =>
+                    `  · ${d.project_name || '(无项目名)'}`
+                ).join('\n') +
+                (dupList.length > 3 ? `\n  ... 还有 ${dupList.length - 3} 条` : '') +
+                `\n\n点击"确定"覆盖写入，点击"取消"取消操作`
+            )) {
+                statusEl.textContent = '用户取消了提取操作';
+                return;
+            }
+
+            // 用户确认覆盖，发送 force=true 请求
+            statusEl.textContent = '用户已确认，正在写入...';
+            const forceResp = await fetch(API + '/bid-dynamic/transfer', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({record_ids: ids, force: true})
+            });
+            const forceRes = await forceResp.json();
+
+            if (forceRes.success) {
+                toast(`⚠️ 已覆盖写入 ${dupCount} 条重复记录\n${forceRes.message}`);
+                statusEl.textContent = forceRes.message;
+            } else {
+                toast('提取失败: ' + (forceRes.error || ''), 'error');
+                statusEl.textContent = '提取失败';
+            }
+        } else if (res.success) {
+            // 没有重复，直接成功
             toast(res.message || '提取完成');
-            bidDynamicSelectedIds.clear();
-            document.getElementById('bidDynamicSelectedCount').textContent = '';
-            loadBidDynamic(bidDynamicPage);
+            statusEl.textContent = res.message;
         } else {
             toast('提取失败: ' + (res.error || ''), 'error');
+            statusEl.textContent = '提取失败';
         }
+
+        // 刷新列表
+        bidDynamicSelectedIds.clear();
+        document.getElementById('bidDynamicSelectedCount').textContent = '';
+        loadBidDynamic(bidDynamicPage);
     } catch(e) {
         toast('提取异常: ' + e.message, 'error');
+        statusEl.textContent = '提取异常';
     }
 }
 

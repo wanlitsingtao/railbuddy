@@ -123,7 +123,7 @@ sources:
   - 城轨
   - 公告
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -1953,12 +1953,12 @@ email:
   password: ywpeqwzddfxsbjcf
   receiver: wanli_tsingtao@163.com
 schedule:
-  auto_send: false
-  fetch_on_start: true
   times:
   - 08:00
   - '12:00'
   timezone: Asia/Shanghai
+  fetch_on_start: true
+  auto_send: true
 dedup:
   db_path: data/railbuddy.db
   retention_days: 90

@@ -11,7 +11,7 @@ import sqlite3
 import os
 import logging
 from datetime import datetime, timedelta
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Set
 from contextlib import contextmanager
 
 from .models import BidItem, TransitMileage, BidRecord
@@ -179,6 +179,18 @@ class Database:
                 CREATE INDEX IF NOT EXISTS idx_bid_date ON bid_records(bid_date);
                 CREATE INDEX IF NOT EXISTS idx_bid_province ON bid_records(province);
 
+                -- 中标抓取分类配置表：存储可配置的抓取目标系统分类及其关键词
+                CREATE TABLE IF NOT EXISTS bid_categories (
+                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name            TEXT NOT NULL UNIQUE,       -- 分类名称，如"通信"
+                    display_order   INTEGER DEFAULT 0,          -- 显示排序
+                    enabled         INTEGER DEFAULT 1,          -- 是否启用
+                    keywords        TEXT NOT NULL,              -- 逗号分隔的关键词列表
+                    description     TEXT DEFAULT '',            -- 分类描述
+                    created_at      TEXT NOT NULL,
+                    updated_at      TEXT NOT NULL
+                );
+
                 -- 中标原始数据表：结构同 bid_records，用于存放抓取到的未审核中标数据
                 CREATE TABLE IF NOT EXISTS bid_raw (
                     record_id           TEXT PRIMARY KEY,      -- MD5(project_name + bid_date)
@@ -225,6 +237,55 @@ class Database:
                 CREATE INDEX IF NOT EXISTS idx_bid_raw_date ON bid_raw(bid_date);
             """)
         logger.debug(f"数据库初始化完成: {self.db_path}")
+
+        # 初始化默认中标抓取分类（如果表为空）
+        self._seed_bid_categories()
+
+    def _seed_bid_categories(self):
+        """初始化默认的中标抓取分类配置"""
+        default_categories = [
+            ("通信", 1, "通信系统,通信,传输系统,光传输,SDH,OTN, MSTP,IP承载网,接入网"),
+            ("专用通信", 2, "专用通信,专用电话,调度通信,公务电话,办公电话,程控交换"),
+            ("公安通信", 3, "公安通信,公安电话,公安无线,警用通信"),
+            ("警用通信", 4, "警用通信,警用无线,警用系统"),
+            ("乘客信息系统(PIS)", 5, "乘客信息,PIS,乘客信息系统,导乘,信息显示,乘客引导,到站显示,广播系统"),
+            ("广播系统(PA)", 6, "广播系统,PA,公共广播,语音广播,应急广播,消防广播"),
+            ("视频监控系统(CCTV)", 7, "视频监控,CCTV,视频监视,安防监控,监控摄像,视频分析,智能视频,视频存储,NVR,DVR,IP Camera"),
+            ("传输系统", 8, "传输系统,光传输,SDH,OTN, MSTP,IP承载网,接入网,通信传输"),
+            ("电源系统", 9, "电源系统,电源屏,配电,供电电源,直流电源,交流电源,电力电源"),
+            ("不间断电源系统(UPS)", 10, "UPS,不间断电源,UPS电源,UPS系统,UPS电池,UPS主机,UPS设备,蓄电池,后备电源"),
+            ("专用无线", 11, "专用无线,TETRA,集群通信,无线集群,LTE-M,车地无线,800M,无线通信系统"),
+            ("车地无线", 12, "车地无线,车地通信,WLAN,WiFi,漏缆,泄漏电缆,车载无线,地铁WiFi"),
+            ("办公自动化系统(OA)", 13, "办公自动化,OA,办公系统,协同办公,OA系统,无纸化办公"),
+            ("导向", 14, "导向,标识,导向标识,导向系统,疏散标识,站内导向,标识标牌,指引导向"),
+            ("自动售检票系统(AFC)", 15, "AFC,自动售检票,售检票,票务系统,清分系统,ACC,闸机,售票机,检票机,充值机,TCM,TVM,AGM,BOM"),
+            ("综合监控系统(ISCS)", 16, "综合监控,ISCS,综合监控系统,环境监控,集成监控"),
+            ("线网系统", 17, "线网,线网指挥,线网控制,线网中心,COCC,NOCC,线网调度,线网平台"),
+            ("智慧车站", 18, "智慧车站,智能车站,智慧地铁,智慧城轨,数字化车站,车站智能化"),
+            ("门禁系统(ACS)", 19, "门禁,ACS,门禁系统,出入口控制,门禁控制器,读卡器"),
+            ("环境与设备监控系统(BAS)", 20, "BAS,环境监控,设备监控,BAS系统,环境与设备,通风空调监控,给排水监控,电扶梯监控"),
+            ("安防", 21, "安防,安防系统,安全防范,周界报警,入侵检测,电子围栏,安防集成"),
+            ("安防集成平台", 22, "安防集成,安防平台,安防集成平台,综合安防,安全管理平台"),
+            ("消防", 23, "消防,消防系统,气体灭火,水消防,消防设备,灭火系统,消火栓,消防报警"),
+            ("时钟系统(CLK)", 24, "时钟,CLK,时钟系统,子钟,母钟,NTP,授时,同步时钟,时间同步"),
+            ("节能控制", 25, "节能,节能控制,节能系统,能耗监测,能源管理,节能改造,节能技术,通风空调节能"),
+            ("行车综合自动化系统(TIAS)", 26, "TIAS,行车综合自动化,行车自动化,行车调度,列车自动监控,ATS"),
+            ("电力监控系统(PSCADA)", 27, "电力监控,PSCADA,变电所自动化,电力调度,SCADA,供电监控,供电系统监控"),
+            ("能源管理系统", 28, "能源管理,EMS,能源管理系统,能耗管理,能耗监测,能源监控"),
+            ("火灾报警系统(FAS)", 29, "FAS,火灾报警,火灾自动报警,消防报警,烟感,温感,探测器,报警主机"),
+        ]
+
+        with self._get_conn() as conn:
+            existing = conn.execute("SELECT COUNT(*) FROM bid_categories").fetchone()[0]
+            if existing == 0:
+                now = datetime.now().isoformat()
+                for name, order, keywords in default_categories:
+                    conn.execute("""
+                        INSERT OR IGNORE INTO bid_categories
+                            (name, display_order, enabled, keywords, description, created_at, updated_at)
+                        VALUES (?, ?, 1, ?, ?, ?, ?)
+                    """, (name, order, keywords, "", now, now))
+                logger.info(f"已初始化 {len(default_categories)} 个默认中标抓取分类")
 
     # ============ 条目操作 ============
 
@@ -970,8 +1031,12 @@ class Database:
                 "SELECT COUNT(DISTINCT city) FROM transit_mileage WHERE city != '全国'"
             ).fetchone()[0]
             latest = conn.execute(
-                "SELECT MAX(data_month) FROM transit_mileage"
+                "SELECT MAX(data_month) FROM transit_mileage WHERE city != '全国'"
             ).fetchone()[0]
+            if not latest:
+                latest = conn.execute(
+                    "SELECT MAX(data_month) FROM transit_mileage"
+                ).fetchone()[0]
 
             # 最新月份的运营总里程（排除 city='全国' 的聚合记录，避免重复计算）
             operational_km = 0
@@ -1280,7 +1345,18 @@ class Database:
     # 用于存放抓取到的未审核中标数据，支持手动审核后提取到 bid_records
 
     def save_bid_raw(self, record: BidRecord) -> bool:
-        """保存中标原始记录到 bid_raw 表"""
+        """保存中标原始记录到 bid_raw 表
+
+        使用 INSERT OR REPLACE 自动处理去重。
+        返回 True 表示保存成功（可能是新增也可能是覆盖）。
+        """
+        # 检查是否已存在
+        existing = self.get_bid_raw(record.record_id)
+        if existing:
+            logger.info(
+                f"bid_raw 记录已存在（将覆盖）: record_id={record.record_id[:16]}... "
+                f"project={record.project_name[:30]}"
+            )
         values = (
             record.record_id, record.province, record.city, record.category,
             record.winner, record.consortium, record.project_name,
@@ -1352,6 +1428,12 @@ class Database:
                 "SELECT * FROM bid_raw WHERE record_id = ?", (record_id,)
             ).fetchone()
             return dict(row) if row else None
+
+    def get_all_bid_raw_ids(self) -> Set[str]:
+        """获取 bid_raw 表中所有 record_id 集合（用于批量去重检查）"""
+        with self._get_conn() as conn:
+            rows = conn.execute("SELECT record_id FROM bid_raw").fetchall()
+            return set(row[0] for row in rows)
 
     def update_bid_raw(self, record_id: str, fields: Dict) -> bool:
         """更新中标原始记录"""
@@ -1477,6 +1559,90 @@ class Database:
                 "total_pages": (total + per_page - 1) // per_page if per_page > 0 else 0
             }
 
+    def get_bid_categories_config(self) -> List[Dict]:
+        """获取所有可配置的中标抓取分类列表（按排序字段升序）"""
+        with self._get_conn() as conn:
+            rows = conn.execute(
+                "SELECT id, name, display_order, enabled, keywords, description, created_at, updated_at "
+                "FROM bid_categories ORDER BY display_order ASC, name ASC"
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    def get_enabled_bid_categories_config(self) -> List[Dict]:
+        """获取所有启用的中标抓取分类"""
+        with self._get_conn() as conn:
+            rows = conn.execute(
+                "SELECT id, name, display_order, enabled, keywords, description "
+                "FROM bid_categories WHERE enabled = 1 ORDER BY display_order ASC, name ASC"
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    def add_bid_category(self, name: str, keywords: str, description: str = "",
+                         display_order: int = 0) -> Optional[int]:
+        """添加中标抓取分类"""
+        now = datetime.now().isoformat()
+        with self._get_conn() as conn:
+            try:
+                cursor = conn.execute(
+                    "INSERT INTO bid_categories (name, display_order, enabled, keywords, description, created_at, updated_at) "
+                    "VALUES (?, ?, 1, ?, ?, ?, ?)",
+                    (name, display_order, keywords, description, now, now)
+                )
+                return cursor.lastrowid
+            except Exception as e:
+                logger.error(f"添加中标分类失败: {e}")
+                return None
+
+    def update_bid_category(self, category_id: int, fields: Dict) -> bool:
+        """更新中标抓取分类"""
+        allowed = {"name", "display_order", "enabled", "keywords", "description"}
+        updates = {k: v for k, v in fields.items() if k in allowed}
+        if not updates:
+            return False
+        updates["updated_at"] = datetime.now().isoformat()
+        set_clause = ", ".join(f"{k} = ?" for k in updates.keys())
+        values = list(updates.values()) + [category_id]
+        with self._get_conn() as conn:
+            try:
+                conn.execute(
+                    f"UPDATE bid_categories SET {set_clause} WHERE id = ?",
+                    values
+                )
+                return True
+            except Exception as e:
+                logger.error(f"更新中标分类失败: {e}")
+                return False
+
+    def delete_bid_category(self, category_id: int) -> bool:
+        """删除中标抓取分类"""
+        with self._get_conn() as conn:
+            try:
+                conn.execute("DELETE FROM bid_categories WHERE id = ?", (category_id,))
+                return True
+            except Exception as e:
+                logger.error(f"删除中标分类失败: {e}")
+                return False
+
+    def get_bid_category_keywords_map(self) -> Dict[str, List[str]]:
+        """获取启用的分类 → 关键词列表映射（用于自动分类）"""
+        categories = self.get_enabled_bid_categories_config()
+        result = {}
+        for cat in categories:
+            name = cat["name"]
+            kw_text = cat.get("keywords", "")
+            keywords = [kw.strip() for kw in kw_text.split(",") if kw.strip()]
+            if keywords:
+                result[name] = keywords
+        return result
+
+    def get_bid_category_names(self) -> List[str]:
+        """获取所有分类名称列表"""
+        with self._get_conn() as conn:
+            rows = conn.execute(
+                "SELECT name FROM bid_categories WHERE enabled = 1 ORDER BY display_order ASC"
+            ).fetchall()
+            return [row["name"] for row in rows]
+
     def get_bid_raw_categories(self) -> List[str]:
         """获取所有中标原始记录的分类列表"""
         with self._get_conn() as conn:
@@ -1527,17 +1693,53 @@ class Database:
                 "year_distribution": [dict(r) for r in year_dist],
             }
 
-    def transfer_bid_raw_to_records(self, record_ids: List[str]) -> Dict:
+    def transfer_bid_raw_to_records(self, record_ids: List[str],
+                                     force: bool = False) -> Dict:
         """将选中的 bid_raw 记录提取到 bid_records 表
+
         Args:
             record_ids: 要提取的 record_id 列表
+            force: 是否强制覆盖已存在的记录（默认 False，如果检测到重复会返回提醒）
         Returns:
-            {"transferred": N, "skipped": N, "errors": [...]}
+            {"transferred": N, "skipped": N, "errors": [...], "duplicates": [...]}
+            当 force=False 且检测到重复时，不会执行写入，只返回 duplicates 列表
         """
+        if not record_ids:
+            return {"transferred": 0, "skipped": 0, "errors": [], "duplicates": []}
+
         transferred = 0
         skipped = 0
         errors = []
+        duplicates = []  # 记录重复详情
+
         with self._get_conn() as conn:
+            # === 1. 先检查重复 ===
+            for rid in record_ids:
+                row = conn.execute("SELECT * FROM bid_raw WHERE record_id = ?", (rid,)).fetchone()
+                if not row:
+                    continue
+                existing = conn.execute(
+                    "SELECT record_id, project_name, winner, bid_date, bid_amount FROM bid_records WHERE record_id = ?",
+                    (rid,)
+                ).fetchone()
+                if existing:
+                    dup = dict(row)
+                    dup["_existing_record"] = dict(existing)
+                    duplicates.append(dup)
+
+            # === 2. 如果有重复且 force=False，不执行写入只返回提醒 ===
+            if duplicates and not force:
+                logger.warning(
+                    f"检测到 {len(duplicates)} 条重复记录，需用户确认后才执行写入"
+                )
+                return {
+                    "transferred": 0,
+                    "skipped": len(duplicates),
+                    "errors": [],
+                    "duplicates": duplicates
+                }
+
+            # === 3. 执行写入（force=True 或无重复时） ===
             for rid in record_ids:
                 try:
                     row = conn.execute("SELECT * FROM bid_raw WHERE record_id = ?", (rid,)).fetchone()
@@ -1569,8 +1771,16 @@ class Database:
                         transferred += 1
                 except Exception as e:
                     errors.append(f"{rid}: {str(e)}")
-        logger.info(f"提取中标记录: transferred={transferred}, skipped={skipped}, errors={len(errors)}")
-        return {"transferred": transferred, "skipped": skipped, "errors": errors}
+        logger.info(
+            f"提取中标记录: transferred={transferred}, skipped={skipped}, "
+            f"errors={len(errors)}, duplicates={len(duplicates)}"
+        )
+        return {
+            "transferred": transferred,
+            "skipped": skipped,
+            "errors": errors,
+            "duplicates": duplicates
+        }
 
     def get_bid_stats(self) -> Dict:
         """获取中标记录统计概要（金额单位：亿元）"""
