@@ -9,6 +9,7 @@
 
 import sqlite3
 import os
+import shutil
 import logging
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Set
@@ -235,6 +236,29 @@ class Database:
                 CREATE INDEX IF NOT EXISTS idx_bid_raw_city ON bid_raw(city);
                 CREATE INDEX IF NOT EXISTS idx_bid_raw_winner ON bid_raw(winner);
                 CREATE INDEX IF NOT EXISTS idx_bid_raw_date ON bid_raw(bid_date);
+
+                -- 里程池表：存放里程原始数据，不直接用于统计
+                CREATE TABLE IF NOT EXISTS mileage_pool (
+                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                    city            TEXT NOT NULL,
+                    system_name     TEXT DEFAULT '',          -- 运营企业/系统名称，如"长沙地铁"
+                    line_name       TEXT DEFAULT '',
+                    system_type     TEXT DEFAULT '地铁',       -- 制式：地铁/轻轨/单轨/市域铁路/有轨电车/磁浮
+                    length_km       REAL,
+                    stations        INTEGER,
+                    opening_date    TEXT,
+                    status          TEXT DEFAULT 'operational',  -- operational/under_construction/planned
+                    data_source     TEXT NOT NULL,              -- mot/wikipedia/website/manual
+                    data_month      TEXT NOT NULL,              -- YYYY-MM
+                    raw_data        TEXT DEFAULT '',            -- 原始文本/JSON
+                    remark          TEXT DEFAULT '',            -- 备注
+                    fetched_at      TEXT NOT NULL,
+                    UNIQUE(city, line_name, data_month)
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_pool_city ON mileage_pool(city);
+                CREATE INDEX IF NOT EXISTS idx_pool_month ON mileage_pool(data_month);
+                CREATE INDEX IF NOT EXISTS idx_pool_status ON mileage_pool(status);
             """)
         logger.debug(f"数据库初始化完成: {self.db_path}")
 
@@ -567,6 +591,256 @@ class Database:
         if deleted > 0:
             logger.info(f"清理过期记录: {deleted} 条")
 
+    # ============ 数据库备份 ============
+
+    def backup_database(self, backup_dir: str = None) -> Optional[str]:
+        """备份数据库文件
+
+        Args:
+            backup_dir: 备份目录，默认在 db_path 同级目录下的 backups 文件夹
+
+        Returns:
+            备份文件路径，失败返回 None
+        """
+        try:
+            # 确定备份目录
+            if not backup_dir:
+                backup_dir = os.path.join(os.path.dirname(self.db_path), "backups")
+            os.makedirs(backup_dir, exist_ok=True)
+
+            # 生成备份文件名：railbuddy_YYYYMMDD_HHMMSS.db
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_file = os.path.join(backup_dir, f"railbuddy_{timestamp}.db")
+
+            # 确保数据库已提交所有事务
+            with self._get_conn() as conn:
+                conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+
+            # 复制数据库文件
+            if os.path.exists(self.db_path):
+                shutil.copy2(self.db_path, backup_file)
+                logger.info(f"数据库备份成功: {backup_file}")
+                return backup_file
+            else:
+                logger.warning(f"数据库文件不存在，跳过备份: {self.db_path}")
+                return None
+        except Exception as e:
+            logger.error(f"数据库备份失败: {e}", exc_info=True)
+            return None
+
+    def cleanup_old_backups(self, backup_dir: str = None, keep_days: int = 30):
+        """清理30天前的数据库备份
+
+        Args:
+            backup_dir: 备份目录
+            keep_days: 保留天数，默认30天
+        """
+        try:
+            if not backup_dir:
+                backup_dir = os.path.join(os.path.dirname(self.db_path), "backups")
+            if not os.path.exists(backup_dir):
+                return
+
+            cutoff = datetime.now() - timedelta(days=keep_days)
+            deleted_count = 0
+
+            for fname in os.listdir(backup_dir):
+                if fname.startswith("railbuddy_") and fname.endswith(".db"):
+                    fpath = os.path.join(backup_dir, fname)
+                    mtime = datetime.fromtimestamp(os.path.getmtime(fpath))
+                    if mtime < cutoff:
+                        os.remove(fpath)
+                        deleted_count += 1
+
+            if deleted_count > 0:
+                logger.info(f"清理旧备份: {deleted_count} 个文件 (超过 {keep_days} 天)")
+        except Exception as e:
+            logger.error(f"清理备份失败: {e}", exc_info=True)
+
+    # ============ 里程池操作（mileage_pool 表）============
+
+    def save_mileage_pool_batch(self, records: List[Dict]) -> int:
+        """批量保存里程原始数据到里程池
+
+        Args:
+            records: 包含字段 city, line_name, system_type, length_km, stations,
+                     opening_date, status, data_source, data_month, raw_data, remark
+
+        Returns:
+            保存条数
+        """
+        if not records:
+            return 0
+        count = 0
+        now = datetime.now().isoformat()
+        with self._get_conn() as conn:
+            for r in records:
+                try:
+                    conn.execute("""
+                        INSERT INTO mileage_pool
+                            (city, system_name, line_name, system_type, length_km, stations,
+                             opening_date, status, data_source, data_month, raw_data, remark, fetched_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(city, line_name, data_month) DO UPDATE SET
+                            system_name = excluded.system_name,
+                            system_type = excluded.system_type,
+                            length_km = excluded.length_km,
+                            stations = excluded.stations,
+                            opening_date = excluded.opening_date,
+                            status = excluded.status,
+                            data_source = excluded.data_source,
+                            raw_data = excluded.raw_data,
+                            remark = excluded.remark,
+                            fetched_at = excluded.fetched_at
+                    """, (
+                        r.get("city", ""), r.get("system_name", ""), r.get("line_name", ""),
+                        r.get("system_type", "地铁"), r.get("length_km"),
+                        r.get("stations"), r.get("opening_date"),
+                        r.get("status", "operational"), r.get("data_source", "manual"),
+                        r.get("data_month", ""), r.get("raw_data", ""),
+                        r.get("remark", ""), now
+                    ))
+                    count += 1
+                except Exception as e:
+                    logger.warning(f"保存里程池数据失败: {r.get('city','')}/{r.get('line_name','')}: {e}")
+        logger.info(f"里程池批量保存: {count}/{len(records)} 条")
+        return count
+
+    def get_mileage_pool(self, data_month: str = None, city: str = None) -> List[Dict]:
+        """查询里程池数据
+
+        Args:
+            data_month: 月份(YYYY-MM)，不传则查全部
+            city: 城市名称
+
+        Returns:
+            里程池记录列表
+        """
+        conditions = []
+        params = []
+        if data_month:
+            conditions.append("data_month = ?")
+            params.append(data_month)
+        if city:
+            conditions.append("city = ?")
+            params.append(city)
+        where = " WHERE " + " AND ".join(conditions) if conditions else ""
+        with self._get_conn() as conn:
+            rows = conn.execute(
+                f"SELECT * FROM mileage_pool{where} ORDER BY city, line_name", params
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    def get_mileage_pool_months(self) -> List[str]:
+        """获取里程池中所有月份"""
+        with self._get_conn() as conn:
+            rows = conn.execute(
+                "SELECT DISTINCT data_month FROM mileage_pool ORDER BY data_month DESC"
+            ).fetchall()
+            return [r[0] for r in rows]
+
+    def get_mileage_pool_cities(self) -> List[str]:
+        """获取里程池中所有城市"""
+        with self._get_conn() as conn:
+            rows = conn.execute(
+                "SELECT DISTINCT city FROM mileage_pool ORDER BY city"
+            ).fetchall()
+            return [r[0] for r in rows]
+
+    def get_mileage_pool_stats(self) -> Dict:
+        """获取里程池统计"""
+        with self._get_conn() as conn:
+            total = conn.execute("SELECT COUNT(*) FROM mileage_pool").fetchone()[0]
+            cities = conn.execute(
+                "SELECT COUNT(DISTINCT city) FROM mileage_pool"
+            ).fetchone()[0]
+            months = conn.execute(
+                "SELECT COUNT(DISTINCT data_month) FROM mileage_pool"
+            ).fetchone()[0]
+            latest_month = conn.execute(
+                "SELECT MAX(data_month) FROM mileage_pool"
+            ).fetchone()[0]
+            return {
+                "total_records": total,
+                "cities": cities,
+                "months": months,
+                "latest_month": latest_month or ""
+            }
+
+    def delete_mileage_pool(self, record_id: int) -> bool:
+        """删除里程池记录"""
+        with self._get_conn() as conn:
+            result = conn.execute(
+                "DELETE FROM mileage_pool WHERE id = ?", (record_id,)
+            )
+            return result.rowcount > 0
+
+    def compute_mileage_statistics(self, data_month: str = None) -> Dict:
+        """从里程池数据统计分析生成 transit_mileage 表数据
+
+        根据里程池中的原始数据，按城市+制式进行聚合统计，
+        生成结构化的里程统计数据写入 transit_mileage 表。
+
+        Args:
+            data_month: 月份(YYYY-MM)，不传则使用最新月份
+
+        Returns:
+            {"transferred": N, "errors": [...]}
+        """
+        with self._get_conn() as conn:
+            if not data_month:
+                row = conn.execute(
+                    "SELECT MAX(data_month) FROM mileage_pool"
+                ).fetchone()
+                data_month = row[0] if row else None
+            if not data_month:
+                logger.warning("里程池无数据，无法统计")
+                return {"transferred": 0, "errors": ["里程池无数据"]}
+
+            # 从里程池获取该月份的所有运营线路
+            pool_rows = conn.execute("""
+                SELECT * FROM mileage_pool
+                WHERE data_month = ? AND status = 'operational'
+                  AND length_km IS NOT NULL AND length_km > 0
+            """, (data_month,)).fetchall()
+
+            if not pool_rows:
+                logger.warning(f"里程池中 {data_month} 月无运营线路数据")
+                return {"transferred": 0, "errors": [f"{data_month} 月无运营数据"]}
+
+        # 逐条写入 transit_mileage 表
+        now = datetime.now().isoformat()
+        transferred = 0
+        errors = []
+
+        for row in pool_rows:
+            try:
+                line_id = generate_item_id(
+                    row["city"] + row["line_name"],
+                    data_month
+                )[:32]
+                tm = TransitMileage(
+                    line_id=line_id,
+                    city=row["city"],
+                    system_name=row["system_name"] or "",
+                    line_name=row["line_name"] or "",
+                    system_type=row["system_type"] or "地铁",
+                    length_km=row["length_km"],
+                    stations=row["stations"],
+                    opening_date=row["opening_date"] or "",
+                    status="operational",
+                    data_source=row["data_source"] or "mileage_pool",
+                    data_month=data_month,
+                    fetched_at=now
+                )
+                self.save_mileage(tm)
+                transferred += 1
+            except Exception as e:
+                errors.append(f"{row.get('city','')}/{row.get('line_name','')}: {e}")
+
+        logger.info(f"里程统计完成: {transferred} 条写入 transit_mileage, errors={len(errors)}")
+        return {"transferred": transferred, "errors": errors}
+
     def get_stats(self) -> Dict:
         """获取数据库统计信息"""
         with self._get_conn() as conn:
@@ -588,6 +862,13 @@ class Database:
             bid_cities = conn.execute(
                 "SELECT COUNT(DISTINCT city) FROM bid_records WHERE city IS NOT NULL AND city != ''"
             ).fetchone()[0]
+            # 里程池统计
+            pool_total = conn.execute("SELECT COUNT(*) FROM mileage_pool").fetchone()[0]
+            pool_cities = conn.execute(
+                "SELECT COUNT(DISTINCT city) FROM mileage_pool"
+            ).fetchone()[0]
+            # bid_raw 统计
+            bid_raw_total = conn.execute("SELECT COUNT(*) FROM bid_raw").fetchone()[0]
             return {
                 "total_items": total,
                 "sent_items": sent,
@@ -596,6 +877,9 @@ class Database:
                 "mileage_records": mileage_total,
                 "mileage_latest_month": mileage_latest or "",
                 "mileage_cities": mileage_cities,
+                "mileage_pool_records": pool_total,
+                "mileage_pool_cities": pool_cities,
+                "bid_raw_total": bid_raw_total,
                 "bid_records": bid_total,
                 "bid_categories": bid_categories,
                 "bid_cities": bid_cities,
@@ -855,6 +1139,14 @@ class Database:
                 if not max_month:
                     continue
 
+                # 查询该月份"总计"记录（MOT月度快报数据）
+                total_record = conn.execute("""
+                    SELECT length_km
+                    FROM transit_mileage
+                    WHERE data_month = ? AND city = '全国' AND system_type = '总计'
+                    LIMIT 1
+                """, (max_month,)).fetchone()
+
                 # 按制式分类统计（从 city='全国' 的记录获取里程数据）
                 # 优先使用 MOT 数据源（data_source='mot_monthly'），避免 seed_history 与 MOT 重复
                 type_rows = conn.execute("""
@@ -931,6 +1223,22 @@ class Database:
                 total_km = sum(t["km"] for t in type_data.values())
                 total_lines = sum(t["lines"] for t in type_data.values())
                 total_cities = max((t["cities"] for t in type_data.values()), default=0)
+
+                # 如果制式分类的里程全为零但有总计记录（如 MOT 月度数据），使用总计值
+                if total_km == 0 and total_record and total_record["length_km"]:
+                    total_km = round(total_record["length_km"], 2)
+                    # 从最新的城市明细数据获取城市数和线路数
+                    detail_cities = max((r["city_count"] for r in detail_stats), default=0) if detail_stats else 0
+                    detail_lines = sum(r["line_count"] for r in detail_stats) if detail_stats else 0
+                    type_data = {
+                        "全国合计": {
+                            "km": total_km,
+                            "lines": detail_lines if detail_lines else total_lines,
+                            "cities": detail_cities if detail_cities else total_cities
+                        }
+                    }
+                    total_lines = detail_lines if detail_lines else total_lines
+                    total_cities = detail_cities if detail_cities else total_cities
 
                 result.append({
                     "year": int(year),
@@ -1692,6 +2000,25 @@ class Database:
                 "total_amount": round(total_amount_yi, 2) if total_amount else 0,
                 "year_distribution": [dict(r) for r in year_dist],
             }
+
+    def get_bid_raw_needing_detail(self, limit: int = 100) -> List[Dict]:
+        """获取需要补充详情数据的 bid_raw 记录
+
+        条件：中标人或金额为空，且有可用链接的记录
+        优先处理 ctbpsp.com 的链接
+        """
+        with self._get_conn() as conn:
+            # 优先查询有链接但缺少中标人和金额的记录
+            rows = conn.execute("""
+                SELECT * FROM bid_raw
+                WHERE bid_link IS NOT NULL AND bid_link != ''
+                  AND (winner IS NULL OR winner = '' OR bid_amount IS NULL)
+                ORDER BY
+                  CASE WHEN bid_link LIKE '%ctbpsp%' THEN 0 ELSE 1 END,
+                  created_at DESC
+                LIMIT ?
+            """, (limit,)).fetchall()
+            return [dict(r) for r in rows]
 
     def transfer_bid_raw_to_records(self, record_ids: List[str],
                                      force: bool = False) -> Dict:

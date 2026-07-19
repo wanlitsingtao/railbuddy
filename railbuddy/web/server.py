@@ -15,10 +15,11 @@ import logging
 import threading
 import yaml
 import tempfile
+import io
 from datetime import datetime
 from typing import Optional
 
-from flask import Flask, request, jsonify, send_from_directory, render_template, make_response, send_file
+from flask import Flask, request, jsonify, send_from_directory, render_template, make_response, send_file, Response
 
 from ..config import Config, ConfigError
 from ..database import Database
@@ -383,6 +384,57 @@ class WebServer:
             except Exception as e:
                 return jsonify({"success": False, "error": str(e)}), 500
 
+        # ---- 调度完整配置（含关键词和源的 fetch_detail） ----
+        @app.route("/api/schedule/config", methods=["GET"])
+        def api_get_schedule_full_config():
+            """获取完整调度配置，包含 keyword_config 和所有源的详细配置"""
+            try:
+                cfg = self._load_config()
+                return jsonify({
+                    "success": True,
+                    "data": {
+                        "keyword_config": {
+                            "keywords": cfg.raw_config.get("keyword_config", {}).get("keywords", []),
+                            "mode": cfg.raw_config.get("keyword_config", {}).get("mode", "or"),
+                        },
+                        "sources": cfg.raw_sources,
+                        "schedule_config": cfg.schedule_config,
+                    }
+                })
+            except Exception as e:
+                logger.error(f"Get schedule config error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/schedule/config", methods=["PUT"])
+        def api_update_schedule_full_config():
+            """更新完整调度配置"""
+            try:
+                data = request.json
+                if not data:
+                    return jsonify({"success": False, "error": "请求数据为空"}), 400
+
+                cfg = self._load_config()
+
+                # 更新关键词配置
+                if "keyword_config" in data:
+                    cfg.raw_config["keyword_config"] = data["keyword_config"]
+                    # 同步到 config 属性
+                    cfg.keyword_config = data["keyword_config"]
+
+                # 更新数据源配置
+                if "sources" in data:
+                    cfg.update_sources(data["sources"])
+
+                # 更新调度配置
+                if "schedule_config" in data:
+                    cfg.update_schedule(data["schedule_config"])
+
+                cfg.save_to_file()
+                return jsonify({"success": True, "message": "调度配置已更新"})
+            except Exception as e:
+                logger.error(f"Update schedule config error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
         # ---- 去重配置 ----
         @app.route("/api/dedup", methods=["GET"])
         def api_get_dedup():
@@ -560,6 +612,184 @@ class WebServer:
                 logger.error(f"Transit cities API error: {e}", exc_info=True)
                 return jsonify({"success": False, "error": str(e)}), 500
 
+        @app.route("/api/export-transit-cities")
+        def api_export_transit_cities():
+            """导出城市里程排名为Excel"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+                data = db.get_city_summary()
+                if not data:
+                    return jsonify({"success": False, "error": "暂无数据"}), 404
+
+                # 尝试使用 openpyxl 生成 Excel
+                try:
+                    import openpyxl
+                    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+                except ImportError:
+                    # 兜底：输出为 CSV
+                    import csv
+                    output = io.StringIO()
+                    writer = csv.writer(output)
+                    writer.writerow(["城市", "系统", "线路数", "里程(km)", "车站数", "制式构成", "首条开通"])
+                    for d in data:
+                        types = (d.get("system_types", "") or "").replace(",", "、")
+                        writer.writerow([
+                            d["city"], d.get("system_name", ""),
+                            d.get("line_count", 0),
+                            round(d.get("total_km", 0), 1) if d.get("total_km") else 0,
+                            d.get("total_stations", 0),
+                            types,
+                            d.get("first_opening", "")
+                        ])
+                    csv_data = output.getvalue().encode("utf-8-sig")
+                    return Response(
+                        csv_data,
+                        mimetype="text/csv; charset=utf-8",
+                        headers={"Content-Disposition": "attachment; filename=city_mileage_ranking.csv"}
+                    )
+
+                wb = openpyxl.Workbook()
+                ws = wb.active
+                ws.title = "城市里程排名"
+
+                # 表头样式
+                header_font = Font(bold=True, color="FFFFFF", size=11)
+                header_fill = PatternFill(start_color="1a237e", end_color="1a237e", fill_type="solid")
+                header_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+                thin_border = Border(
+                    left=Side(style="thin"),
+                    right=Side(style="thin"),
+                    top=Side(style="thin"),
+                    bottom=Side(style="thin")
+                )
+
+                headers = ["序号", "城市", "系统", "线路数", "里程(km)", "车站数", "制式构成", "首条开通"]
+                for col, h in enumerate(headers, 1):
+                    cell = ws.cell(row=1, column=col, value=h)
+                    cell.font = header_font
+                    cell.fill = header_fill
+                    cell.alignment = header_align
+                    cell.border = thin_border
+
+                # 数据行
+                city_align = Alignment(vertical="center")
+                num_align = Alignment(horizontal="right", vertical="center")
+                center_align = Alignment(horizontal="center", vertical="center")
+                data_font = Font(size=10)
+                city_font = Font(size=10, bold=True)
+
+                unique_cities = set()
+                # 先计算连续分组的rowspan（用于Excel合并）
+                group_rowspans = []
+                current_city = None
+                current_count = 0
+                for d in data:
+                    if d["city"] == current_city:
+                        current_count += 1
+                    else:
+                        if current_city is not None:
+                            group_rowspans.append({"city": current_city, "rowspan": current_count})
+                        current_city = d["city"]
+                        current_count = 1
+                    unique_cities.add(d["city"])
+                if current_city is not None:
+                    group_rowspans.append({"city": current_city, "rowspan": current_count})
+                # 构建行号->rowspan映射
+                rowspan_map = {}
+                idx = 0
+                for g in group_rowspans:
+                    rowspan_map[idx] = g["rowspan"]
+                    idx += g["rowspan"]
+                # 写数据行
+                city_idx = 0
+                prev_city = None
+                for i, d in enumerate(data):
+                    row_num = i + 2
+                    is_first = (prev_city != d["city"])
+                    if is_first:
+                        city_idx += 1
+                    prev_city = d["city"]
+                    span = rowspan_map.get(i, 1)
+
+                    types = (d.get("system_types", "") or "").replace(",", "、")
+                    km_val = round(d.get("total_km", 0), 1) if d.get("total_km") else 0
+
+                    ws.cell(row=row_num, column=1, value=city_idx if is_first else "").font = data_font
+                    ws.cell(row=row_num, column=1).alignment = Alignment(horizontal="center")
+                    if is_first and span > 1:
+                        ws.cell(row=row_num, column=2, value=d["city"]).font = city_font
+                        ws.cell(row=row_num, column=2).alignment = city_align
+                    elif is_first:
+                        ws.cell(row=row_num, column=2, value=d["city"]).font = city_font
+                        ws.cell(row=row_num, column=2).alignment = city_align
+                    else:
+                        ws.cell(row=row_num, column=2, value="").font = data_font
+                    ws.cell(row=row_num, column=3, value=d.get("system_name", "")).font = data_font
+                    ws.cell(row=row_num, column=4, value=d.get("line_count", 0)).font = data_font
+                    ws.cell(row=row_num, column=4).alignment = num_align
+                    ws.cell(row=row_num, column=5, value=km_val).font = data_font
+                    ws.cell(row=row_num, column=5).alignment = num_align
+                    ws.cell(row=row_num, column=6, value=d.get("total_stations", 0)).font = data_font
+                    ws.cell(row=row_num, column=6).alignment = num_align
+                    ws.cell(row=row_num, column=7, value=types).font = data_font
+                    ws.cell(row=row_num, column=8, value=d.get("first_opening", "")).font = data_font
+
+                    for col in range(1, 9):
+                        ws.cell(row=row_num, column=col).border = thin_border
+
+                # 合计行
+                total_row = len(data) + 2
+                total_lines = sum(d.get("line_count", 0) for d in data)
+                total_km = sum(d.get("total_km", 0) or 0 for d in data)
+                total_stations = sum(d.get("total_stations", 0) for d in data)
+
+                summary_font = Font(size=10, bold=True)
+                summary_fill = PatternFill(start_color="e8f0fe", end_color="e8f0fe", fill_type="solid")
+
+                ws.cell(row=total_row, column=1, value="").font = summary_font
+                ws.cell(row=total_row, column=1).fill = summary_fill
+                ws.cell(row=total_row, column=2, value=f"合计（{len(unique_cities)}城）").font = summary_font
+                ws.cell(row=total_row, column=2).fill = summary_fill
+                ws.cell(row=total_row, column=3, value="").font = summary_font
+                ws.cell(row=total_row, column=3).fill = summary_fill
+                ws.cell(row=total_row, column=4, value=total_lines).font = summary_font
+                ws.cell(row=total_row, column=4).alignment = num_align
+                ws.cell(row=total_row, column=4).fill = summary_fill
+                ws.cell(row=total_row, column=5, value=round(total_km, 1)).font = summary_font
+                ws.cell(row=total_row, column=5).alignment = num_align
+                ws.cell(row=total_row, column=5).fill = summary_fill
+                ws.cell(row=total_row, column=6, value=total_stations).font = summary_font
+                ws.cell(row=total_row, column=6).alignment = num_align
+                ws.cell(row=total_row, column=6).fill = summary_fill
+                ws.cell(row=total_row, column=7, value="").font = summary_font
+                ws.cell(row=total_row, column=7).fill = summary_fill
+                ws.cell(row=total_row, column=8, value="").font = summary_font
+                ws.cell(row=total_row, column=8).fill = summary_fill
+
+                for col in range(1, 9):
+                    ws.cell(row=total_row, column=col).border = thin_border
+
+                # 列宽
+                col_widths = [6, 12, 18, 8, 12, 8, 20, 14]
+                for col, w in enumerate(col_widths, 1):
+                    ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = w
+
+                output = io.BytesIO()
+                wb.save(output)
+                output.seek(0)
+
+                return Response(
+                    output.getvalue(),
+                    mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={
+                        "Content-Disposition": f"attachment; filename=city_mileage_ranking_{datetime.now().strftime('%Y%m%d')}.xlsx"
+                    }
+                )
+            except Exception as e:
+                logger.error(f"Export transit cities API error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
         @app.route("/api/transit-mileage")
         def api_transit_mileage():
             """查询单月里程明细"""
@@ -633,6 +863,83 @@ class WebServer:
                 return jsonify({"success": True, "data": result})
             except Exception as e:
                 logger.error(f"Seed history API error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        # ---- 里程池管理 ----
+        @app.route("/api/mileage-pool", methods=["GET"])
+        def api_mileage_pool():
+            """获取里程池数据"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+                data_month = request.args.get("data_month", None)
+                city = request.args.get("city", None)
+                pool_data = db.get_mileage_pool(data_month=data_month, city=city)
+                return jsonify({"success": True, "data": pool_data})
+            except Exception as e:
+                logger.error(f"Mileage pool API error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/mileage-pool/stats", methods=["GET"])
+        def api_mileage_pool_stats():
+            """获取里程池统计"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+                stats = db.get_mileage_pool_stats()
+                return jsonify({"success": True, "data": stats})
+            except Exception as e:
+                logger.error(f"Mileage pool stats API error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/mileage-pool/compute-stats", methods=["POST"])
+        def api_mileage_pool_compute_stats():
+            """从里程池数据统计分析，生成 transit_mileage 统计数据"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+                data = request.json or {}
+                data_month = data.get("data_month", None)
+                result = db.compute_mileage_statistics(data_month=data_month)
+                return jsonify({"success": True, "data": result})
+            except Exception as e:
+                logger.error(f"Mileage pool compute stats API error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/mileage-pool/months", methods=["GET"])
+        def api_mileage_pool_months():
+            """获取里程池所有月份"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+                months = db.get_mileage_pool_months()
+                return jsonify({"success": True, "data": months})
+            except Exception as e:
+                logger.error(f"Mileage pool months API error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/mileage-pool/cities", methods=["GET"])
+        def api_mileage_pool_cities():
+            """获取里程池所有城市"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+                cities = db.get_mileage_pool_cities()
+                return jsonify({"success": True, "data": cities})
+            except Exception as e:
+                logger.error(f"Mileage pool cities API error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/mileage-pool/<int:record_id>", methods=["DELETE"])
+        def api_mileage_pool_delete(record_id: int):
+            """删除里程池记录"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+                ok = db.delete_mileage_pool(record_id)
+                return jsonify({"success": ok})
+            except Exception as e:
+                logger.error(f"Mileage pool delete API error: {e}", exc_info=True)
                 return jsonify({"success": False, "error": str(e)}), 500
 
         # ---- 发送日志 ----
@@ -1557,6 +1864,155 @@ class WebServer:
                 })
             except Exception as e:
                 logger.error(f"Bid dynamic check duplicate error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        # ---- 补齐中标详情（Playwright 自动化） ----
+        @app.route("/api/bid-dynamic/fill-details", methods=["POST"])
+        def api_bid_dynamic_fill_details():
+            """使用 Playwright 自动抓取详情页，补齐中标人和金额"""
+            try:
+                data = request.json or {}
+                limit = int(data.get("limit", 100))
+
+                config = self._load_config()
+                db = self._get_db(config)
+
+                # 获取需要补充的记录数
+                need_detail = db.get_bid_raw_needing_detail(limit=limit)
+                total_count = len(need_detail)
+
+                # 异步执行补齐任务
+                def run_fill():
+                    try:
+                        config = self._load_config()
+                        db = self._get_db(config)
+                        fetcher_mgr = FetcherManager(
+                            sources_config=[],
+                            wechat_sources_config=[],
+                        )
+                        stats = fetcher_mgr.fill_bid_details(db, limit=limit)
+                        logger.info(f"补齐中标详情完成: {stats}")
+                    except Exception as e:
+                        logger.error(f"补齐中标详情异常: {e}", exc_info=True)
+
+                thread = threading.Thread(target=run_fill, daemon=True)
+                thread.start()
+
+                return jsonify({
+                    "success": True,
+                    "message": f"已开始补齐 {total_count} 条记录的中标详情（后台执行）",
+                    "data": {
+                        "total": total_count,
+                    }
+                })
+            except Exception as e:
+                logger.error(f"Fill bid details error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        @app.route("/api/bid-dynamic/fill-details-status", methods=["GET"])
+        def api_bid_dynamic_fill_details_status():
+            """查询补齐进度状态（简单返回统计）"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+
+                need_detail = db.get_bid_raw_needing_detail(limit=10000)
+                total_need = len(need_detail)
+
+                # 统计已补齐的情况
+                with db._get_conn() as conn:
+                    with_winner = conn.execute(
+                        "SELECT COUNT(*) FROM bid_raw WHERE winner IS NOT NULL AND winner != ''"
+                    ).fetchone()[0]
+                    with_amount = conn.execute(
+                        "SELECT COUNT(*) FROM bid_raw WHERE bid_amount IS NOT NULL"
+                    ).fetchone()[0]
+                    total = conn.execute(
+                        "SELECT COUNT(*) FROM bid_raw"
+                    ).fetchone()[0]
+
+                return jsonify({
+                    "success": True,
+                    "data": {
+                        "total": total,
+                        "with_winner": with_winner,
+                        "with_amount": with_amount,
+                        "needing_detail": total_need,
+                        "is_running": False,  # 简化处理
+                    }
+                })
+            except Exception as e:
+                logger.error(f"Fill details status error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        # ---- 补齐金额（针对 bid_raw 表） ----
+        @app.route("/api/bid-dynamic/fill-amounts", methods=["POST"])
+        def api_bid_dynamic_fill_amounts():
+            """补齐 bid_raw 表中空缺的中标金额"""
+            try:
+                data = request.json or {}
+                limit = int(data.get("limit", 50))
+
+                config = self._load_config()
+                db = self._get_db(config)
+
+                # 获取需要补齐金额的记录（金额为空但有链接的记录）
+                with db._get_conn() as conn:
+                    rows = conn.execute(
+                        """SELECT * FROM bid_raw
+                           WHERE (bid_amount IS NULL OR bid_amount = 0)
+                             AND bid_link IS NOT NULL AND bid_link != ''
+                           ORDER BY bid_date DESC
+                           LIMIT ?""", (limit,)
+                    ).fetchall()
+
+                records = [dict(r) for r in rows]
+                filled = 0
+                errors = 0
+
+                # 使用 Playwright 补齐金额
+                if records:
+                    try:
+                        from ..fetchers.playwright_detail import PlaywrightDetailFetcher
+                        fetcher = PlaywrightDetailFetcher()
+
+                        for record in records:
+                            try:
+                                detail = fetcher.fetch_detail(record.get("bid_link", ""))
+                                if detail:
+                                    update_fields = {}
+                                    bid_amount = detail.get("bid_amount")
+                                    winner = detail.get("winner")
+
+                                    if bid_amount is not None and (record.get("bid_amount") is None or record["bid_amount"] == 0):
+                                        update_fields["bid_amount"] = bid_amount
+                                    if winner and (record.get("winner") is None or record["winner"] == ""):
+                                        update_fields["winner"] = winner
+
+                                    if update_fields:
+                                        db.update_bid_raw(record["record_id"], update_fields)
+                                        filled += 1
+                            except Exception as e:
+                                logger.warning(f"补齐金额失败: {record.get('record_id','')}: {e}")
+                                errors += 1
+                    except ImportError:
+                        logger.warning("Playwright 不可用，跳过补齐")
+                else:
+                    return jsonify({
+                        "success": True,
+                        "data": {"filled": 0, "total": 0, "message": "没有需要补齐金额的记录"}
+                    })
+
+                return jsonify({
+                    "success": True,
+                    "data": {
+                        "filled": filled,
+                        "total": len(records),
+                        "errors": errors
+                    }
+                })
+            except Exception as e:
+                logger.error(f"Fill amounts error: {e}", exc_info=True)
                 return jsonify({"success": False, "error": str(e)}), 500
 
     def run(self, debug: bool = False):

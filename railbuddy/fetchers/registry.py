@@ -30,6 +30,14 @@ FETCHER_TYPES = {
     "mot": MOTFetcher,
 }
 
+# 尝试导入 PlaywrightDetailFetcher
+try:
+    from .playwright_detail import PlaywrightDetailFetcher
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    PLAYWRIGHT_AVAILABLE = False
+    PlaywrightDetailFetcher = None
+
 
 class FetcherManager:
     """抓取器管理器
@@ -202,14 +210,30 @@ class FetcherManager:
                 logger.error(f"[{fetcher.name}] 抓取异常: {e}", exc_info=True)
                 db.update_fetch_time(fetcher.name, 0, "failed", str(e))
 
-        # 批量保存里程数据
+        # 批量保存里程数据到里程池（mileage_pool），不再直接写入 transit_mileage
         if all_mileage:
-            saved = db.save_mileage_batch(all_mileage)
-            logger.info(f"里程数据批量保存: {saved}/{len(all_mileage)} 条")
+            # 将 TransitMileage 转为里程池格式
+            pool_records = []
+            for m in all_mileage:
+                pool_records.append({
+                    "city": m.city,
+                    "system_name": m.system_name,
+                    "line_name": m.line_name,
+                    "system_type": m.system_type,
+                    "length_km": m.length_km,
+                    "stations": m.stations,
+                    "opening_date": m.opening_date,
+                    "status": "operational",
+                    "data_source": m.data_source,
+                    "data_month": m.data_month,
+                    "raw_data": "",
+                    "remark": ""
+                })
+            saved = db.save_mileage_pool_batch(pool_records)
+            logger.info(f"里程数据保存到里程池: {saved}/{len(all_mileage)} 条")
 
-        # ---- 新增：独立抓取中标数据，写入 bid_raw 表 ----
-        # 从本次抓取的所有 items（包括已存在去重前的）中，筛选中标类条目，
-        # 解析结构化字段后写入 bid_raw 表（供"中标动态"模块审核使用）
+        # ---- 提取中标数据到 bid_raw 表（仅 bid_raw，不自动写入 bid_records）----
+        # 中标记录只能通过手工提取写入 bid_records
         try:
             self._extract_to_bid_raw(db, all_new_items)
         except Exception as e:
@@ -413,3 +437,37 @@ class FetcherManager:
         if len(cleaned) > 80:
             cleaned = cleaned[:80]
         return cleaned.strip()
+
+    def fill_bid_details(self, db: Database, limit: int = 100,
+                         progress_callback=None) -> Dict:
+        """使用 Playwright 自动抓取中标详情页，补齐 bid_raw 中的中标人和金额
+
+        Args:
+            db: Database 实例
+            limit: 一次最多处理条数
+            progress_callback: 进度回调函数
+
+        Returns:
+            Dict: 处理统计结果
+        """
+        if not PLAYWRIGHT_AVAILABLE or PlaywrightDetailFetcher is None:
+            return {
+                "success": False,
+                "error": "Playwright 未安装，请运行: pip install playwright && playwright install chromium",
+                "total": 0, "processed": 0, "filled_winner": 0,
+                "filled_amount": 0, "errors": 0, "skipped": 0,
+            }
+
+        try:
+            fetcher = PlaywrightDetailFetcher(headless=True)
+            stats = fetcher.fill_bid_raw_details(db, limit=limit, progress_callback=progress_callback)
+            stats["success"] = True
+            return stats
+        except Exception as e:
+            logger.error(f"补齐中标详情异常: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e),
+                "total": 0, "processed": 0, "filled_winner": 0,
+                "filled_amount": 0, "errors": 0, "skipped": 0,
+            }

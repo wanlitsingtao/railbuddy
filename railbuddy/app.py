@@ -6,7 +6,7 @@ import time
 import signal
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 from .config import Config
 from .database import Database
@@ -23,10 +23,14 @@ class RailBuddyApp:
 
     职责：
     1. 加载配置和初始化各模块
-    2. 编排抓取 → 去重 → 邮件发送的完整流程
-    3. 管理定时调度
-    4. 处理启动时补偿抓取（空挡修复）
-    5. 优雅退出
+    2. 管理三种爬虫的顺序执行：
+       - 行业信息爬虫（抓取行业新闻、招标信息等 → items表）
+       - 里程数据爬虫（抓取里程数据 → mileage_pool表）
+       - 中标数据爬虫（抓取中标数据 → bid_raw表）
+    3. 数据库备份与清理
+    4. 管理定时调度
+    5. 处理启动时补偿抓取（空挡修复）
+    6. 优雅退出
     """
 
     def __init__(self, config_path: str = "config.yaml"):
@@ -96,101 +100,228 @@ class RailBuddyApp:
         self._running = False
         self.scheduler.shutdown()
 
-    def run_task(self):
-        """执行一次完整的抓取 → 发送任务
+    def _backup_database(self):
+        """执行数据库备份，并清理30天前的备份"""
+        logger.info(">>> 数据库备份")
+        backup_dir = os.path.join(self.base_dir, "data", "backups")
+        backup_file = self.db.backup_database(backup_dir)
+        if backup_file:
+            logger.info(f"  备份文件: {backup_file}")
+        self.db.cleanup_old_backups(backup_dir, keep_days=30)
+        logger.info("  旧备份清理完成（保留30天内）")
 
-        这是定时任务调用的核心方法，包含完整的业务流程：
-        1. 执行全量抓取（自动增量 + 去重）
-        2. 如果有新条目，发送邮件
-        3. 更新发送状态
-        4. 清理过期数据
+    def run_crawler_industry(self) -> List:
+        """爬虫1：行业信息爬虫 - 抓取行业新闻、招标信息等
+
+        从所有已配置的网站/公众号/微博数据源抓取信息，
+        写入 items 表（用于行业信息浏览和邮件发送）。
+
+        Returns:
+            新发现的条目列表
         """
-        logger.info("=" * 50)
-        logger.info("开始执行定时抓取任务")
+        logger.info("=" * 40)
+        logger.info("【爬虫1】行业信息爬虫 - 开始")
+        start_time = time.time()
+
+        try:
+            # 获取遗留的未发送条目
+            pending_items = self.db.get_unsent_items()
+            if pending_items:
+                logger.info(f"  发现 {len(pending_items)} 条遗留未发送条目")
+
+            # 执行增量抓取
+            new_items = self.fetcher_manager.fetch_all(self.db)
+            all_items = pending_items + new_items
+
+            # 自动发送邮件（如果启用）
+            if all_items and self.auto_send:
+                logger.info(f"  发送邮件: {len(all_items)} 条")
+                success = self.mailer.send(all_items)
+                if success:
+                    item_ids = [item.item_id for item in all_items]
+                    self.db.mark_items_sent(item_ids)
+                    sources_involved = set(item.source for item in all_items)
+                    for sn in sources_involved:
+                        self.db.update_send_time(sn)
+                    self.db.log_send(
+                        item_count=len(all_items),
+                        recipients=self.config.email_config.get("receiver", ""),
+                        status="success"
+                    )
+                    logger.info(f"  邮件发送成功")
+                else:
+                    self.db.log_send(
+                        item_count=len(all_items),
+                        recipients=self.config.email_config.get("receiver", ""),
+                        status="failed",
+                        error_msg="SMTP 发送失败"
+                    )
+
+            elapsed = time.time() - start_time
+            logger.info(f"【爬虫1】行业信息爬虫完成: {len(new_items)} 新增, {elapsed:.2f}秒")
+            return all_items
+
+        except Exception as e:
+            logger.error(f"【爬虫1】异常: {e}", exc_info=True)
+            return []
+
+    def run_crawler_mileage(self) -> int:
+        """爬虫2：里程数据爬虫 - 抓取轨道交通里程数据
+
+        从交通运输部(MOT)、Wikipedia等数据源抓取里程数据，
+        写入 mileage_pool 表（里程原始数据池）。
+
+        Returns:
+            抓取到的里程记录条数
+        """
+        logger.info("=" * 40)
+        logger.info("【爬虫2】里程数据爬虫 - 开始")
+        start_time = time.time()
+
+        try:
+            # 筛选出里程相关的抓取器（MOT、Wikipedia等）
+            mileage_fetchers = []
+            for fetcher in self.fetcher_manager.fetchers:
+                if hasattr(fetcher, 'mileage_records'):
+                    mileage_fetchers.append(fetcher)
+
+            if not mileage_fetchers:
+                logger.info("  未发现里程数据源，跳过")
+                return 0
+
+            total_records = 0
+            for fetcher in mileage_fetchers:
+                if not fetcher.enabled:
+                    continue
+                try:
+                    logger.info(f"  执行: [{fetcher.name}]")
+                    items = fetcher.fetch(since_time=None)
+
+                    # 收集里程数据
+                    if hasattr(fetcher, 'mileage_records') and fetcher.mileage_records:
+                        pool_records = []
+                        for m in fetcher.mileage_records:
+                            pool_records.append({
+                                "city": m.city,
+                                "system_name": m.system_name,
+                                "line_name": m.line_name,
+                                "system_type": m.system_type,
+                                "length_km": m.length_km,
+                                "stations": m.stations,
+                                "opening_date": m.opening_date,
+                                "status": "operational",
+                                "data_source": m.data_source,
+                                "data_month": m.data_month,
+                                "raw_data": "",
+                                "remark": ""
+                            })
+                        saved = self.db.save_mileage_pool_batch(pool_records)
+                        total_records += saved
+                        logger.info(f"  [{fetcher.name}] 里程数据: {saved} 条")
+
+                    # 更新抓取状态
+                    self.db.update_fetch_time(fetcher.name, len(items), "success")
+
+                except Exception as e:
+                    logger.error(f"  [{fetcher.name}] 里程抓取异常: {e}", exc_info=True)
+                    self.db.update_fetch_time(fetcher.name, 0, "failed", str(e))
+
+            elapsed = time.time() - start_time
+            logger.info(f"【爬虫2】里程数据爬虫完成: {total_records} 条, {elapsed:.2f}秒")
+            return total_records
+
+        except Exception as e:
+            logger.error(f"【爬虫2】异常: {e}", exc_info=True)
+            return 0
+
+    def run_crawler_bid(self) -> int:
+        """爬虫3：中标数据爬虫 - 抓取中标数据
+
+        从所有已配置的数据源抓取信息，
+        筛选中标类条目并提取结构化字段，写入 bid_raw 表（中标动态数据）。
+        注意：中标记录（bid_records）只能通过手工提取写入。
+
+        Returns:
+            写入 bid_raw 的条数
+        """
+        logger.info("=" * 40)
+        logger.info("【爬虫3】中标数据爬虫 - 开始")
+        start_time = time.time()
+
+        try:
+            # 执行全量抓取，但不限制历史天数
+            new_items = self.fetcher_manager.fetch_all(self.db)
+
+            # fetch_all 内部已自动提取中标数据到 bid_raw（_extract_to_bid_raw）
+            # 统计 bid_raw 中本次新增的条数
+            bid_raw_count = 0
+            if new_items:
+                # 统计新抓取条目中被识别为中标类的数量
+                BID_KEYWORDS = [
+                    "中标", "成交结果", "结果公示", "中标候选人",
+                    "中标结果", "成交公示",
+                ]
+                for item in new_items:
+                    title = getattr(item, "title", "") or ""
+                    category = getattr(item, "category", "") or ""
+                    if category == "中标" or any(kw in title for kw in BID_KEYWORDS):
+                        bid_raw_count += 1
+
+            elapsed = time.time() - start_time
+            logger.info(f"【爬虫3】中标数据爬虫完成: 抓取 {len(new_items)} 条, "
+                        f"中标识别 {bid_raw_count} 条, {elapsed:.2f}秒")
+            return bid_raw_count
+
+        except Exception as e:
+            logger.error(f"【爬虫3】异常: {e}", exc_info=True)
+            return 0
+
+    def run_all_crawlers(self):
+        """顺序执行所有爬虫任务
+
+        1. 数据库备份
+        2. 行业信息爬虫
+        3. 里程数据爬虫
+        4. 中标数据爬虫
+        5. 清理过期数据
+        """
+        logger.info("=" * 60)
+        logger.info("开始执行全量抓取任务（3种爬虫顺序执行）")
         task_start = time.time()
 
         try:
-            # 0. 先获取遗留的未发送条目（上次发送失败留下的）
-            pending_items = self.db.get_unsent_items()
-            if pending_items:
-                logger.info(f"发现 {len(pending_items)} 条遗留未发送条目，将合并发送")
+            # 0. 数据库备份
+            self._backup_database()
 
-            # 1. 抓取所有数据源
-            logger.info(">>> 第1步: 抓取数据源")
-            new_items = self.fetcher_manager.fetch_all(self.db)
+            # 1. 行业信息爬虫
+            self.run_crawler_industry()
 
-            # 合并遗留未发送 + 新抓取
-            all_items = pending_items + new_items
+            # 2. 里程数据爬虫
+            self.run_crawler_mileage()
 
-            if not all_items:
-                logger.info("未发现新项目，本次任务结束")
-                self._log_task_summary(0, task_start)
-                return
-
-            # 检查是否启用自动发送
-            if not self.auto_send:
-                logger.info(f">>> 自动发送已关闭，本次抓取 {len(all_items)} 条项目仅入库不发送")
-                self._log_task_summary(0, task_start)
-                return
-
-            logger.info(f">>> 第2步: 发送邮件 ({len(all_items)} 个项目)")
-
-            # 2. 发送邮件
-            success = self.mailer.send(all_items)
-
-            if success:
-                # 3. 标记为已发送
-                item_ids = [item.item_id for item in all_items]
-                self.db.mark_items_sent(item_ids)
-
-                # 更新各源的发送时间
-                sources_involved = set(item.source for item in all_items)
-                for source_name in sources_involved:
-                    self.db.update_send_time(source_name)
-
-                # 记录发送日志
-                self.db.log_send(
-                    item_count=len(all_items),
-                    recipients=self.config.email_config.get("receiver", ""),
-                    status="success"
-                )
-                logger.info(f"邮件发送成功，{len(all_items)} 个项目已标记为已发送")
-            else:
-                # 发送失败：不标记为已发送，下次会重新尝试
-                self.db.log_send(
-                    item_count=len(all_items),
-                    recipients=self.config.email_config.get("receiver", ""),
-                    status="failed",
-                    error_msg="SMTP 发送失败"
-                )
-                logger.warning("邮件发送失败，条目保持未发送状态，下次将重试")
+            # 3. 中标数据爬虫
+            self.run_crawler_bid()
 
             # 4. 清理过期数据
             self.db.cleanup_expired()
 
         except Exception as e:
-            logger.error(f"任务执行异常: {e}", exc_info=True)
+            logger.error(f"全量抓取任务异常: {e}", exc_info=True)
 
-        sent_count = len(all_items) if "all_items" in dir() else 0
-        self._log_task_summary(sent_count, task_start)
-
-    def _log_task_summary(self, item_count: int, start_time: float):
-        """记录任务摘要"""
-        elapsed = time.time() - start_time
+        elapsed = time.time() - task_start
         stats = self.db.get_stats()
-        logger.info("-" * 50)
-        logger.info(f"任务摘要:")
-        logger.info(f"  新增项目: {item_count}")
-        logger.info(f"  数据库总计: {stats['total_items']} 条 "
-                     f"(已发送 {stats['sent_items']}, 待发送 {stats['unsent_items']})")
-        logger.info(f"  监控源数: {stats['tracked_sources']}")
-        logger.info(f"  耗时: {elapsed:.2f} 秒")
-        logger.info("=" * 50)
+        logger.info("=" * 60)
+        logger.info(f"全量抓取任务完成，耗时 {elapsed:.2f} 秒")
+        logger.info(f"  行业信息: {stats['total_items']} 条 (items表)")
+        logger.info(f"  里程池: {stats.get('mileage_pool_records', 0)} 条 (mileage_pool表)")
+        logger.info(f"  中标动态: {stats.get('bid_raw_total', 0)} 条 (bid_raw表)")
+        logger.info(f"  中标记录: {stats['bid_records']} 条 (bid_records表)")
+        logger.info("=" * 60)
 
     def run(self):
         """启动服务
 
-        1. 如果配置了 fetch_on_start，启动时立即执行一次抓取（补偿空挡）
+        1. 如果配置了 fetch_on_start，启动时立即执行一次全量抓取
         2. 注册定时任务
         3. 启动调度器（阻塞运行）
         """
@@ -203,8 +334,9 @@ class RailBuddyApp:
 
         # 打印数据库统计
         stats = self.db.get_stats()
-        logger.info(f"数据库状态: 总计 {stats['total_items']} 条, "
-                     f"已发送 {stats['sent_items']} 条, 待发送 {stats['unsent_items']} 条")
+        logger.info(f"数据库状态: 行业信息 {stats['total_items']} 条, "
+                     f"中标记录 {stats['bid_records']} 条, "
+                     f"里程池 {stats.get('mileage_pool_records', 0)} 条")
 
         # 打印上次抓取状态
         source_states = self.db.get_all_source_states()
@@ -215,21 +347,21 @@ class RailBuddyApp:
                              f"状态 {ss.get('last_fetch_status', '未知')}, "
                              f"条目 {ss.get('last_fetch_count', 0)}")
 
-        # 启动时补偿抓取
+        # 启动时全量抓取
         if self.fetch_on_start:
-            logger.info(">>> 启动补偿抓取（检查程序停止期间是否有遗漏）")
-            self._compensate_gap()
+            logger.info(">>> 启动全量抓取（检查程序停止期间是否有遗漏）")
+            self.run_all_crawlers()
         else:
-            logger.info("fetch_on_start=False，跳过启动补偿抓取")
+            logger.info("fetch_on_start=False，跳过启动抓取")
 
-        # 注册定时任务
+        # 注册定时任务（使用 run_all_crawlers 代替原来的 run_task）
         logger.info("注册定时任务:")
         times = self.config.schedule_config.get("times", ["08:00", "12:00"])
         for time_str in times:
             try:
                 hour, minute = map(int, time_str.strip().split(":"))
                 self.scheduler.add_cron_job(
-                    self.run_task,
+                    self.run_all_crawlers,
                     job_id=f"daily_{hour:02d}_{minute:02d}",
                     hour=hour, minute=minute
                 )
@@ -243,44 +375,11 @@ class RailBuddyApp:
         self.scheduler.start()
         logger.info("服务已停止")
 
+    # 保留 run_task 兼容旧版调用
+    def run_task(self):
+        """兼容旧版：执行一次完整的抓取任务（等同于 run_all_crawlers）"""
+        self.run_all_crawlers()
+
     def _compensate_gap(self):
-        """补偿抓取：检查程序停止期间是否有遗漏的条目
-
-        逻辑：
-        1. 查询数据库中是否有未发送的条目（之前抓取但未发送的）
-        2. 执行一次新的抓取（会自动从上次抓取时间增量抓取）
-        3. 合并后如果有未发送条目，立即发送
-        """
-        # 先检查是否有之前遗留的未发送条目
-        pending = self.db.get_unsent_items()
-        if pending:
-            logger.info(f"发现 {len(pending)} 条遗留未发送条目，将合并发送")
-
-        # 执行增量抓取
-        new_items = self.fetcher_manager.fetch_all(self.db)
-
-        # 合并遗留 + 新抓取
-        all_items = pending + new_items
-
-        if all_items:
-            if not self.auto_send:
-                logger.info(f"补偿抓取: 共 {len(all_items)} 条入库 "
-                             f"(遗留 {len(pending)} + 新增 {len(new_items)})，自动发送已关闭")
-                return
-
-            logger.info(f"补偿抓取: 共 {len(all_items)} 条待发送 "
-                         f"(遗留 {len(pending)} + 新增 {len(new_items)})")
-            success = self.mailer.send(all_items)
-            if success:
-                item_ids = [item.item_id for item in all_items]
-                self.db.mark_items_sent(item_ids)
-                self.db.log_send(
-                    item_count=len(all_items),
-                    recipients=self.config.email_config.get("receiver", ""),
-                    status="success"
-                )
-                logger.info(f"补偿发送成功: {len(all_items)} 个项目")
-            else:
-                logger.warning("补偿发送失败，条目将在下次定时任务中重试")
-        else:
-            logger.info("补偿抓取完成，无新项目")
+        """兼容旧版：启动补偿抓取"""
+        self.run_all_crawlers()

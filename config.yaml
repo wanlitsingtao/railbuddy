@@ -16,7 +16,7 @@ sources:
   - 公告
   - 开通
   - 运营
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: '.content, .article-content, #content'
   timeout: 15
   request_interval: 2
@@ -78,7 +78,7 @@ sources:
   - 公告
   - 开通
   - 运营
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -102,7 +102,7 @@ sources:
   - 地铁
   - 城轨
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -144,7 +144,7 @@ sources:
   - 开工
   - 竣工
   - 开通试运营
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -167,7 +167,7 @@ sources:
   - 竞价
   - 开通
   - 运营
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -190,7 +190,7 @@ sources:
   - 轨道
   - 地铁
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -213,7 +213,7 @@ sources:
   - 轨道
   - 地铁
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -235,7 +235,7 @@ sources:
   - 地铁
   - 轨道
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -257,7 +257,7 @@ sources:
   - 地铁
   - 轨道
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -280,7 +280,7 @@ sources:
   - 轨道
   - 地铁
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -300,7 +300,7 @@ sources:
   - 地铁
   - 公告
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -322,7 +322,7 @@ sources:
   - 轨道
   - 地铁
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -344,7 +344,7 @@ sources:
   - 轨道
   - 地铁
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -366,7 +366,7 @@ sources:
   - 轨道
   - 地铁
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -391,7 +391,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -425,7 +425,7 @@ sources:
   - 改造
   - 总承包
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   timeout: 15
   request_interval: 2
 - name: 大连公共资源交易中心
@@ -449,7 +449,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -474,14 +474,14 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
 - date_selector: td:last-child
   detail_content_selector: .content, .article-content
   enabled: true
-  fetch_detail: false
+  fetch_detail: true
   keywords:
   - 招标
   - 采购
@@ -560,7 +560,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -585,7 +585,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -610,7 +610,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -636,7 +636,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -661,7 +661,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -686,7 +686,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -711,7 +711,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -736,7 +736,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -803,7 +803,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -828,7 +828,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -853,7 +853,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -878,7 +878,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -903,7 +903,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -928,7 +928,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -953,7 +953,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -978,7 +978,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -1003,7 +1003,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -1028,7 +1028,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -1053,7 +1053,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -1078,7 +1078,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -1103,7 +1103,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -1128,7 +1128,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -1153,7 +1153,7 @@ sources:
   - 铁路
   - 交通
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -1192,7 +1192,7 @@ sources:
   - 监理
   - 总承包
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -1231,7 +1231,7 @@ sources:
   - 监理
   - 总承包
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -1270,7 +1270,7 @@ sources:
   - 监理
   - 总承包
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .content, .article-content
   timeout: 15
   request_interval: 2
@@ -1425,7 +1425,7 @@ sources:
   - 开通
   - 运营
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .article, .content,
   timeout: 15
   request_interval: 3
@@ -1449,7 +1449,7 @@ sources:
   - 地铁
   - 城轨
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   detail_content_selector: .article, .content,
   timeout: 15
   request_interval: 3
@@ -1598,7 +1598,7 @@ sources:
   - 年度
   - 里程
   - 城际
-  fetch_detail: false
+  fetch_detail: true
   timeout: 15
   request_interval: 3
 wechat_sources:

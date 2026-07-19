@@ -761,7 +761,6 @@
                 <button class="btn btn-outline btn-sm" onclick="exportBidExcel()">📊 导出Excel</button>
                 <button class="btn btn-outline btn-sm" onclick="downloadImportTemplate()">📋 导出模版</button>
                 <button class="btn btn-outline btn-sm" onclick="showImportModal()">📥 从Excel导入</button>
-                <button class="btn btn-outline btn-sm" onclick="fillMissingAmounts()" id="btnFillAmounts">🔍 补全金额</button>
                 <span id="bidImportStatus" style="font-size:13px;color:var(--text-secondary);margin-left:8px"></span>
             </div>
             <div class="card">
@@ -815,10 +814,13 @@
             <div class="action-bar">
                 <button class="btn btn-primary btn-sm" onclick="openBidDynamicModal()">+ 新增中标动态</button>
                 <button class="btn btn-success btn-sm" onclick="transferSelectedBidDynamic()">📤 提取选中到中标数据表</button>
+                <button class="btn btn-info btn-sm" onclick="fillBidDetails()">🤖 补齐中标详情</button>
+                <button class="btn btn-success btn-sm" onclick="fillBidAmount()">💰 补齐金额</button>
                 <button class="btn btn-outline btn-sm" onclick="toggleSelectAllDynamic()">全选/取消全选</button>
                 <span id="bidDynamicSelectedCount" style="font-size:13px;color:var(--text-secondary);margin-left:8px"></span>
                 <button class="btn btn-outline btn-sm" onclick="loadBidDynamic()">🔁 刷新</button>
                 <span id="bidDynamicTransferStatus" style="font-size:13px;color:var(--text-secondary);margin-left:8px"></span>
+                <span id="bidDynamicFillStatus" style="font-size:13px;color:var(--success);margin-left:8px"></span>
             </div>
             <div class="card">
                 <div id="bidDynamicTable" style="overflow-x:auto"><div class="loading">加载中...</div></div>
@@ -836,6 +838,15 @@
                 <button class="btn btn-outline btn-sm" onclick="loadMileageStats()">🔁 刷新</button>
                 <button class="btn btn-primary btn-sm" onclick="seedHistoryData()">📥 加载历史数据</button>
                 <span id="seedStatus" style="margin-left:8px;font-size:13px;color:var(--text-secondary)"></span>
+            </div>
+            <div class="card" style="margin-bottom:16px;background:#fff8e1;border-left:4px solid #ffa000;padding:12px 16px">
+                <div style="font-size:13px;color:#795548;line-height:1.6">
+                    <strong>💡 数据说明：</strong>本系统里程数据来自多源汇总，各统计口径可能存在差异：<br>
+                    • <strong style="color:#1a73e8">线路明细累加（10430.5 km / 49城）</strong> = 当前页面"运营总里程"及下方城市排名表：由各城市各线路长度直接求和，仅统计已运营线路（最新数据月：2024-12），不含部分新开通线路<br>
+                    • <strong style="color:#e53935">CAMET/协会年度数据（12160.77 km / 58城）</strong> = 年度趋势图中2024年数值（柱状图红色+蓝色部分）：含全制式（地铁+轻轨+单轨+市域+有轨+磁浮），为2024年末官方汇总数据，口径更宽<br>
+                    • <strong style="color:#26a69a">交通运输部(MOT)月度快报（11848.8 km / 54城）</strong> = 年度趋势图中2025/2026年数值（绿色柱）：统计口径与协会不同（不含部分市域/有轨电车），为交通运输部月度发布数据<br>
+                    • 年度趋势中2025/2026年数据来自交通运输部月度快报（非年末完整汇总），数值低于2024年协会数据属正常（统计口径+时间差异）；标注◇的年份为MOT月度快报数据
+                </div>
             </div>
             <div class="stats-grid" id="mileageStatsGrid" style="margin-bottom:20px">
                 <div class="loading">加载中...</div>
@@ -2589,12 +2600,33 @@ function renderNationalTrend(data) {
     // data: [{year, data_month, cities, lines, total_km, by_type: {"地铁": {km, lines, cities}, "其他": {km, lines, cities}}}]
     const years = data.map(d => d.year);
     const totalKms = data.map(d => d.total_km || 0);
-    const metroKms = data.map(d => (d.by_type && d.by_type['地铁']) ? d.by_type['地铁'].km : 0);
+    // 处理两种 by_type 结构：标准分制式 或 全国合计
+    const metroKms = data.map(d => {
+        if (!d.by_type) return 0;
+        // 如果有"地铁"分类，取地铁里程
+        if (d.by_type['地铁']) return d.by_type['地铁'].km || 0;
+        // 如果有"全国合计"（MOT月度数据未细分制式），按历史占比估算地铁占比
+        if (d.by_type['全国合计']) {
+            // 查找最近一个有制式分类的年份的地铁占比
+            const totalKm = d.total_km || 0;
+            // 对于没有细分的数据，显示为单色柱（归入"其他制式"大类）
+            return 0;
+        }
+        return 0;
+    });
     const otherKms = data.map(d => {
         if (!d.by_type) return 0;
-        return Object.entries(d.by_type)
-            .filter(([k]) => k !== '地铁')
-            .reduce((sum, [, v]) => sum + (v.km || 0), 0);
+        // 标准分制式数据：取非地铁的其他制式
+        if (d.by_type['地铁']) {
+            return Object.entries(d.by_type)
+                .filter(([k]) => k !== '地铁')
+                .reduce((sum, [, v]) => sum + (v.km || 0), 0);
+        }
+        // MOT月度数据（全国合计）：total_km 就是全部里程
+        if (d.by_type['全国合计']) {
+            return d.total_km || 0;
+        }
+        return 0;
     });
     const cities = data.map(d => d.cities || 0);
     const lines = data.map(d => d.lines || 0);
@@ -2609,23 +2641,47 @@ function renderNationalTrend(data) {
         const totalKm = totalKms[i];
         const metroKm = metroKms[i];
         const otherKm = otherKms[i];
+        const hasTypeBreakdown = data[i].by_type && data[i].by_type['地铁'];
         const metroH = (metroKm / maxKm) * chartHeight;
         const otherH = (otherKm / maxKm) * chartHeight;
         const totalH = metroH + otherH;
 
-        barsHtml += `
-            <div style="display:inline-block;text-align:center;margin:0 1px;vertical-align:bottom;position:relative" title="${y}年: 总计${totalKm.toFixed(0)}km (地铁${metroKm.toFixed(0)}km / 其他${otherKm.toFixed(0)}km)">
-                <div style="font-size:9px;color:var(--text-secondary);margin-bottom:2px">${totalKm > 0 ? totalKm.toFixed(0) : ''}</div>
+        // 如果 totalKm > 0 但 metroH + otherH = 0（理论上不应发生），用单色条显示
+        const showTotal = totalKm > 0;
+        const singleBarH = showTotal ? (totalKm / maxKm) * chartHeight : 0;
+
+        let barContent = '';
+        if (hasTypeBreakdown) {
+            // 分制式显示：地铁（红色）+ 其他（蓝色）
+            barContent = `
                 <div style="width:${barWidth}px;display:flex;flex-direction:column-reverse">
-                    <div style="height:${metroH}px;background:linear-gradient(180deg,#e53935,#c62828);border-radius:0 0 3px 3px;min-height:${metroKm > 0 ? '2px' : '0'}"></div>
-                    <div style="height:${otherH}px;background:linear-gradient(180deg,#1e88e5,#1565c0);min-height:${otherKm > 0 ? '2px' : '0'}"></div>
+                    <div style="height:${metroH}px;background:linear-gradient(180deg,#e53935,#c62828);border-radius:${otherKm > 0 ? '0' : '0 0 3px 3px'};min-height:${metroKm > 0 ? '2px' : '0'}"></div>
+                    <div style="height:${otherH}px;background:linear-gradient(180deg,#1e88e5,#1565c0);border-radius:3px 3px 0 0;min-height:${otherKm > 0 ? '2px' : '0'}"></div>
                 </div>
-                <div style="font-size:8px;color:var(--text-secondary);margin-top:3px">${y}</div>
+            `;
+        } else {
+            // 无细分制式数据（如MOT月度快报）：单色蓝条
+            barContent = `
+                <div style="width:${barWidth}px">
+                    <div style="height:${singleBarH}px;background:linear-gradient(180deg,#26a69a,#00897b);border-radius:3px 3px 3px 3px;min-height:${showTotal ? '2px' : '0'}"></div>
+                </div>
+            `;
+        }
+
+        const isMotData = !hasTypeBreakdown && data[i].by_type && data[i].by_type['全国合计'];
+        const dataMonth = data[i].data_month || '';
+        barsHtml += `
+            <div style="display:inline-block;text-align:center;margin:0 1px;vertical-align:bottom;position:relative" title="${y}年: 总计${totalKm.toFixed(0)}km${hasTypeBreakdown ? ' (地铁' + metroKm.toFixed(0) + 'km / 其他' + otherKm.toFixed(0) + 'km)' : ''}${isMotData ? ' (MOT月度快报' + dataMonth + ')' : ''}">
+                <div style="font-size:9px;color:var(--text-secondary);margin-bottom:2px">${totalKm > 0 ? totalKm.toFixed(0) : ''}</div>
+                ${barContent}
+                <div style="font-size:8px;color:var(--text-secondary);margin-top:3px">${y}${isMotData ? '◇' : ''}</div>
             </div>
         `;
     });
 
     const lastData = data[data.length - 1];
+    // 判断最近一年是否有制式分类
+    const lastHasBreakdown = lastData && lastData.by_type && lastData.by_type['地铁'];
     document.getElementById('annualTrendChart').innerHTML = `
         <div style="overflow-x:auto;padding:10px 0">
             <div style="display:flex;align-items:flex-end;justify-content:flex-start;height:${chartHeight + 50}px;min-width:${barAreaW}px">
@@ -2635,6 +2691,7 @@ function renderNationalTrend(data) {
         <div style="display:flex;gap:16px;justify-content:center;margin-top:8px;font-size:12px;color:var(--text-secondary)">
             <span><span style="display:inline-block;width:10px;height:10px;background:#e53935;border-radius:2px;vertical-align:middle;margin-right:4px"></span>地铁里程</span>
             <span><span style="display:inline-block;width:10px;height:10px;background:#1e88e5;border-radius:2px;vertical-align:middle;margin-right:4px"></span>其他制式(轻轨/单轨/市域/有轨电车等)</span>
+            <span><span style="display:inline-block;width:10px;height:10px;background:#26a69a;border-radius:2px;vertical-align:middle;margin-right:4px"></span>MOT月度合计(未细分)</span>
             <span>🏙️ ${lastData.cities || '-'}城</span>
             <span>🚇 ${lastData.lines || '-'}线</span>
         </div>
@@ -2695,30 +2752,60 @@ function renderSystemTypeBreakdown(data) {
 
 function renderCityRanking(data) {
     // data: [{city, system_name, line_count, total_km, total_stations, first_opening, system_types, statuses}, ...]
-    // 按城市分组，相同城市的行合并城市单元格
+    // 按城市分组，相同城市的行合并城市单元格（仅当连续出现时合并）
     const items = data.slice(0, 50);
     let rows = '';
-    let prevCity = null;
-    let cityRowspan = 0;
-    // 先计算每个城市的行数
-    const cityCounts = {};
+    let cityIndex = 0; // 城市序号（合并单元格后一个城市只占一个序号）
+    // 按连续分组计算 rowspan，而非全局计数（避免相同城市不连续出现时错行）
+    const groupRowspans = [];
+    let currentCity = null;
+    let currentCount = 0;
     for (const c of items) {
-        cityCounts[c.city] = (cityCounts[c.city] || 0) + 1;
+        if (c.city === currentCity) {
+            currentCount++;
+        } else {
+            if (currentCity !== null) {
+                groupRowspans.push({ city: currentCity, rowspan: currentCount });
+            }
+            currentCity = c.city;
+            currentCount = 1;
+        }
     }
+    if (currentCity !== null) {
+        groupRowspans.push({ city: currentCity, rowspan: currentCount });
+    }
+    // 建立索引映射
+    const rowspanMap = {};
+    let groupIdx = 0;
+    for (let i = 0; i < items.length; i++) {
+        if (groupIdx < groupRowspans.length && items[i].city === groupRowspans[groupIdx].city) {
+            rowspanMap[i] = groupRowspans[groupIdx].rowspan;
+            if (i + groupRowspans[groupIdx].rowspan - 1 < items.length) {
+                // 跳过后续同组行
+            }
+            groupIdx++;
+        }
+    }
+
+    let prevCity = null;
     for (let i = 0; i < items.length; i++) {
         const c = items[i];
         const types = (c.system_types || '').split(',').filter(t => t).join('、');
         const isFirstInCity = (prevCity !== c.city);
         if (isFirstInCity) {
-            cityRowspan = cityCounts[c.city] || 1;
             prevCity = c.city;
+            cityIndex++;
         }
-        const cityCell = isFirstInCity
-            ? `<td style="padding:6px 10px;font-weight:600" rowspan="${cityRowspan}">${escapeHtml(c.city)}</td>`
-            : '';
+        // 使用连续分组 rowspan
+        const span = rowspanMap[i] || 1;
+        const cityCell = isFirstInCity && span > 1
+            ? `<td style="padding:6px 10px;font-weight:600;vertical-align:middle" rowspan="${span}">${escapeHtml(c.city)}</td>`
+            : isFirstInCity
+                ? `<td style="padding:6px 10px;font-weight:600;vertical-align:middle">${escapeHtml(c.city)}</td>`
+                : `<td style="padding:6px 10px;display:none"></td>`;
         rows += `
             <tr style="border-bottom:1px solid var(--border)">
-                <td style="padding:6px 10px;color:var(--text-secondary)">${i + 1}</td>
+                <td style="padding:6px 10px;color:var(--text-secondary);text-align:center">${isFirstInCity ? cityIndex : ''}</td>
                 ${cityCell}
                 <td style="padding:6px 10px;color:var(--text-secondary)">${escapeHtml(c.system_name || '-')}</td>
                 <td style="padding:6px 10px;text-align:right">${c.line_count || '-'}</td>
@@ -2730,23 +2817,63 @@ function renderCityRanking(data) {
         `;
     }
 
-    document.getElementById('cityRankingTable').innerHTML = `
-        <table style="width:100%;border-collapse:collapse;font-size:13px">
-            <thead>
-                <tr style="border-bottom:2px solid var(--border)">
-                    <th style="padding:8px 10px;text-align:left">#</th>
-                    <th style="padding:8px 10px;text-align:left">城市</th>
-                    <th style="padding:8px 10px;text-align:left">系统</th>
-                    <th style="padding:8px 10px;text-align:right">线路数</th>
-                    <th style="padding:8px 10px;text-align:right">里程(km)</th>
-                    <th style="padding:8px 10px;text-align:right">车站数</th>
-                    <th style="padding:8px 10px;text-align:left">制式构成</th>
-                    <th style="padding:8px 10px;text-align:left">首条开通</th>
-                </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-        </table>
+    // 合计行
+    const totalLines = items.reduce((s, d) => s + (d.line_count || 0), 0);
+    const totalKm = items.reduce((s, d) => s + (d.total_km || 0), 0);
+    const totalStations = items.reduce((s, d) => s + (d.total_stations || 0), 0);
+    const uniqueCities = [...new Set(items.map(d => d.city))].length;
+    rows += `
+        <tr style="border-top:2px solid var(--border);font-weight:700;background:var(--primary-light)">
+            <td style="padding:8px 10px;text-align:center"></td>
+            <td style="padding:8px 10px;font-weight:700" colspan="2">合计（${uniqueCities}城）</td>
+            <td style="padding:8px 10px;text-align:right">${totalLines}</td>
+            <td style="padding:8px 10px;text-align:right;color:var(--primary)">${totalKm.toFixed(1)} km</td>
+            <td style="padding:8px 10px;text-align:right">${totalStations}</td>
+            <td style="padding:8px 10px" colspan="2"></td>
+        </tr>
     `;
+
+    document.getElementById('cityRankingTable').innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <span style="font-size:13px;color:var(--text-secondary)">共 ${uniqueCities} 个城市，${items.length} 条系统记录</span>
+            <button class="btn btn-outline btn-sm" onclick="exportCityRankingExcel()">📥 导出Excel</button>
+        </div>
+        <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:13px">
+                <thead>
+                    <tr style="border-bottom:2px solid var(--border)">
+                        <th style="padding:8px 10px;text-align:center">#</th>
+                        <th style="padding:8px 10px;text-align:left">城市</th>
+                        <th style="padding:8px 10px;text-align:left">系统</th>
+                        <th style="padding:8px 10px;text-align:right">线路数</th>
+                        <th style="padding:8px 10px;text-align:right">里程(km)</th>
+                        <th style="padding:8px 10px;text-align:right">车站数</th>
+                        <th style="padding:8px 10px;text-align:left">制式构成</th>
+                        <th style="padding:8px 10px;text-align:left">首条开通</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+// 导出城市排名Excel
+async function exportCityRankingExcel() {
+    try {
+        const res = await fetch('/api/export-transit-cities');
+        if (!res.ok) throw new Error('导出失败');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '城市里程排名_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+        a.click();
+        URL.revokeObjectURL(url);
+        toast('导出成功', 'success');
+    } catch (e) {
+        toast('导出失败: ' + e.message, 'error');
+    }
 }
 
 function renderCityTrend(data) {
@@ -4732,6 +4859,89 @@ async function transferSelectedBidDynamic() {
     } catch(e) {
         toast('提取异常: ' + e.message, 'error');
         statusEl.textContent = '提取异常';
+    }
+}
+
+// 初始加载
+loadDashboard();
+
+
+// 补齐金额（调用后端 fill-amounts API）
+async function fillBidAmount() {
+    const statusEl = document.getElementById('bidDynamicFillStatus');
+    statusEl.textContent = '正在补齐金额...';
+    
+    try {
+        const resp = await fetch(API + '/bid-dynamic/fill-amounts', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({limit: 50})
+        });
+        
+        if (!resp.ok) {
+            const err = await resp.json();
+            throw new Error(err.error || '请求失败');
+        }
+        
+        const data = await resp.json();
+        if (data.success) {
+            statusEl.textContent = `✅ 已补齐 ${data.data?.filled || 0} 条金额`;
+            toast(`金额补齐完成: ${data.data?.filled || 0} 条`, 'success');
+        } else {
+            throw new Error(data.error || '补齐失败');
+        }
+        
+        // 刷新列表
+        loadBidDynamic(bidDynamicPage);
+    } catch(e) {
+        console.error('fillBidAmount error:', e);
+        statusEl.textContent = '❌ 异常: ' + e.message;
+        toast('补齐金额异常: ' + e.message, 'error');
+    }
+}
+
+// 补齐中标详情（Playwright 自动化）
+async function fillBidDetails() {
+    const statusEl = document.getElementById('bidDynamicFillStatus');
+    statusEl.textContent = '正在查询需要补齐的记录...';
+    
+    try {
+        // 先查询状态
+        const statusResp = await fetch(API + '/bid-dynamic/fill-details-status');
+        if (!statusResp.ok) {
+            throw new Error('查询状态失败');
+        }
+        const statusData = await statusResp.json();
+        
+        if (statusData.running) {
+            statusEl.textContent = '⏳ 正在执行中，请稍候...';
+            toast('已有补齐任务正在执行，请稍候', 'warning');
+            return;
+        }
+        
+        // 确认执行
+        statusEl.textContent = '正在执行补齐...';
+        const resp = await fetch(API + '/bid-dynamic/fill-details', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({limit: 100})
+        });
+        
+        if (!resp.ok) {
+            const err = await resp.json();
+            throw new Error(err.error || '请求失败');
+        }
+        
+        const data = await resp.json();
+        statusEl.textContent = `✅ 已处理 ${data.processed} 条，补齐中标方: ${data.winner_filled} 条，补齐金额: ${data.amount_filled} 条`;
+        toast(`补齐完成: ${data.processed} 条记录`, 'success');
+        
+        // 刷新列表
+        loadBidDynamic(bidDynamicPage);
+    } catch(e) {
+        console.error('fillBidDetails error:', e);
+        statusEl.textContent = '❌ 异常: ' + e.message;
+        toast('补齐异常: ' + e.message, 'error');
     }
 }
 
