@@ -117,8 +117,12 @@ class WebsiteFetcher(BaseFetcher):
         title = clean_title(title)
 
         # 提取链接
-        link_elem = item_elem.select_one(self.link_selector) or title_elem
-        href = self._extract_link(link_elem, item_elem)
+        # data_link 格式：链接在列表项容器自身的 data-link 属性上
+        if self.link_format == "data_link":
+            href = self._extract_link(item_elem, item_elem)
+        else:
+            link_elem = item_elem.select_one(self.link_selector) or title_elem
+            href = self._extract_link(link_elem, item_elem)
 
         if not href:
             return None
@@ -160,8 +164,16 @@ class WebsiteFetcher(BaseFetcher):
         - "" (默认)：标准 <a href="..."> 链接
         - "javascript_urlopen"：解析 href="javascript:urlOpen('uuid')" 格式
           （中国招标投标公共服务平台），提取 uuid
+        - "data_link"：从 data-link 属性提取完整URL
+          （中国城轨协会 camet.org.cn 等）
         """
         href = ""
+
+        # data_link 格式：从 data-link 属性提取（优先级最高，因为不需拼接）
+        if self.link_format == "data_link":
+            elem = link_elem if link_elem and link_elem.name else item_elem
+            href = elem.get("data-link", "") if hasattr(elem, "get") else ""
+            return href
 
         # 默认：从 href 属性提取
         if not self.link_format:

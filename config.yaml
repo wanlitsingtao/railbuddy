@@ -1571,7 +1571,7 @@ sources:
   request_interval: 3
 - name: 维基百科城轨里程
   type: wikipedia
-  enabled: false
+  enabled: true
   base_url: https://zh.wikipedia.org
   fetch_city_details: true
   max_cities: 0
@@ -1586,11 +1586,12 @@ sources:
   type: website
   enabled: true
   url: https://www.camet.org.cn/xytj/tjxx/
-  list_selector: div.list a, ul li a, a
-  title_selector: ''
-  link_selector: a
-  date_selector: span.date, .time
-  link_prefix: https://www.camet.org.cn
+  list_selector: div.detail_box
+  title_selector: div.content-title
+  link_selector: div.detail_box
+  link_format: data_link
+  link_prefix: ''
+  date_selector: span.time
   keywords:
   - 城市轨道交通
   - 统计
@@ -1598,7 +1599,7 @@ sources:
   - 年度
   - 里程
   - 城际
-  fetch_detail: true
+  fetch_detail: false
   timeout: 15
   request_interval: 3
 wechat_sources:

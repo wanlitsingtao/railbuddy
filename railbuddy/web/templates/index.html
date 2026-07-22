@@ -836,7 +836,8 @@
             </div>
             <div class="action-bar">
                 <button class="btn btn-outline btn-sm" onclick="loadMileageStats()">🔁 刷新</button>
-                <button class="btn btn-primary btn-sm" onclick="seedHistoryData()">📥 加载历史数据</button>
+                <button class="btn btn-primary btn-sm" onclick="triggerMileageAnalysis()">📊 触发统计分析</button>
+                <button class="btn btn-outline btn-sm" style="background:#ff8f00;color:white;border-color:#ff8f00" onclick="fetchMileageFromWeb()">🌐 重新从网上抓取里程数据</button>
                 <span id="seedStatus" style="margin-left:8px;font-size:13px;color:var(--text-secondary)"></span>
             </div>
             <div class="card" style="margin-bottom:16px;background:#fff8e1;border-left:4px solid #ffa000;padding:12px 16px">
@@ -2962,27 +2963,55 @@ function renderCityTrend(data) {
     `;
 }
 
-async function seedHistoryData() {
+/**
+ * 触发统计分析：从里程池(mileage_pool)数据生成 transit_mileage 统计数据
+ */
+async function triggerMileageAnalysis() {
     const statusEl = document.getElementById('seedStatus');
-    const btn = event.target;
-    btn.disabled = true;
-    statusEl.textContent = '正在加载历史数据...';
-
+    statusEl.textContent = '正在统计分析里程池数据...';
     try {
-        const res = await fetch('/api/seed-history', {method: 'POST'});
+        const res = await fetch('/api/mileage-pool/compute-stats', {method: 'POST'});
         const result = await res.json();
         if (result.success) {
             const d = result.data;
-            statusEl.innerHTML = `<span style="color:#4CAF50">✓ 加载成功: ${d.annual_records || 0} 条年度数据 + ${d.city_line_records || 0} 条线路明细</span>`;
-            // 重新加载页面数据
+            statusEl.innerHTML = `<span style="color:#4CAF50">✓ 统计分析完成: 已处理 ${d.transferred || 0} 条记录</span>`;
             setTimeout(() => loadMileageStats(), 500);
         } else {
-            statusEl.innerHTML = `<span style="color:#f44336">✗ 加载失败: ${escapeHtml(result.error)}</span>`;
+            statusEl.innerHTML = `<span style="color:#f44336">✗ 分析失败: ${escapeHtml(result.error)}</span>`;
         }
     } catch (e) {
         statusEl.innerHTML = `<span style="color:#f44336">✗ 错误: ${escapeHtml(e.message)}</span>`;
-    } finally {
-        btn.disabled = false;
+    }
+}
+
+/**
+ * 从网上重新抓取里程数据（调用里程爬虫）
+ */
+async function fetchMileageFromWeb() {
+    const statusEl = document.getElementById('seedStatus');
+    if (!confirm('确定要从网上重新抓取里程数据吗？\n这将运行里程数据爬虫，抓取交通运输部、维基百科等数据源的最新里程数据。')) return;
+    statusEl.textContent = '正在抓取里程数据，请稍候...';
+    try {
+        const res = await fetch('/api/fetch-mileage', {method: 'POST'});
+        const result = await res.json();
+        if (result.success) {
+            const d = result.data;
+            let msg = `✓ 抓取完成: ${d.mileage_records || 0} 条里程数据已写入里程池`;
+            if (d.errors && d.errors.length > 0) {
+                msg += `，${d.errors.length} 个错误`;
+            }
+            statusEl.innerHTML = `<span style="color:#4CAF50">${msg}</span>`;
+            // 提示用户进行统计分析
+            setTimeout(() => {
+                if (confirm('里程数据已抓取完成，是否立即触发统计分析以更新里程统计页面？')) {
+                    triggerMileageAnalysis();
+                }
+            }, 300);
+        } else {
+            statusEl.innerHTML = `<span style="color:#f44336">✗ 抓取失败: ${escapeHtml(result.error)}</span>`;
+        }
+    } catch (e) {
+        statusEl.innerHTML = `<span style="color:#f44336">✗ 错误: ${escapeHtml(e.message)}</span>`;
     }
 }
 

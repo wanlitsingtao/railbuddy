@@ -942,6 +942,83 @@ class WebServer:
                 logger.error(f"Mileage pool delete API error: {e}", exc_info=True)
                 return jsonify({"success": False, "error": str(e)}), 500
 
+        # ---- 手动操作：从网上抓取里程数据 ----
+        @app.route("/api/fetch-mileage", methods=["POST"])
+        def api_fetch_mileage():
+            """运行里程数据爬虫，从网上抓取里程数据到里程池"""
+            try:
+                config = self._load_config()
+                db = self._get_db(config)
+
+                # 使用 FetcherManager 初始化所有抓取器（包括 MOT、Wikipedia 等里程数据源）
+                fetcher_mgr = FetcherManager(
+                    sources_config=config.sources,
+                    wechat_sources_config=config.wechat_sources,
+                    max_items_per_source=config.max_items_per_source,
+                    max_age_days=0  # 手动抓取不限制历史天数
+                )
+
+                # 筛选里程相关的抓取器（MOT、Wikipedia 等实现了 mileage_records 属性的）
+                mileage_fetchers = []
+                for fetcher in fetcher_mgr.fetchers:
+                    if hasattr(fetcher, 'mileage_records'):
+                        mileage_fetchers.append(fetcher)
+
+                if not mileage_fetchers:
+                    return jsonify({
+                        "success": False,
+                        "error": "未发现里程数据源（请检查配置中是否包含 MOT 或 Wikipedia 类型数据源）"
+                    }), 400
+
+                total_records = 0
+                errors = []
+                for fetcher in mileage_fetchers:
+                    if not fetcher.enabled:
+                        continue
+                    try:
+                        logger.info(f"里程爬虫执行: [{fetcher.name}]")
+                        items = fetcher.fetch(since_time=None)
+
+                        if hasattr(fetcher, 'mileage_records') and fetcher.mileage_records:
+                            pool_records = []
+                            for m in fetcher.mileage_records:
+                                pool_records.append({
+                                    "city": m.city,
+                                    "system_name": m.system_name,
+                                    "line_name": m.line_name,
+                                    "system_type": m.system_type,
+                                    "length_km": m.length_km,
+                                    "stations": m.stations,
+                                    "opening_date": m.opening_date,
+                                    "status": "operational",
+                                    "data_source": m.data_source,
+                                    "data_month": m.data_month,
+                                    "raw_data": "",
+                                    "remark": ""
+                                })
+                            saved = db.save_mileage_pool_batch(pool_records)
+                            total_records += saved
+                            logger.info(f"  [{fetcher.name}] 里程数据: {saved} 条")
+
+                        db.update_fetch_time(fetcher.name, len(items), "success")
+                    except Exception as e:
+                        err_msg = f"[{fetcher.name}] 里程抓取异常: {e}"
+                        logger.error(err_msg, exc_info=True)
+                        errors.append(err_msg)
+                        db.update_fetch_time(fetcher.name, 0, "failed", str(e))
+
+                return jsonify({
+                    "success": True,
+                    "data": {
+                        "mileage_records": total_records,
+                        "fetchers_used": len(mileage_fetchers),
+                        "errors": errors
+                    }
+                })
+            except Exception as e:
+                logger.error(f"Fetch mileage API error: {e}", exc_info=True)
+                return jsonify({"success": False, "error": str(e)}), 500
+
         # ---- 发送日志 ----
         @app.route("/api/send-logs")
         def api_send_logs():
